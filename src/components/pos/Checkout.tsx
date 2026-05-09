@@ -15,6 +15,7 @@ import { Minus, Plus, Trash2, Receipt, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { Receipt as ReceiptView } from "./Receipt";
 import { BarcodeScanner } from "./BarcodeScanner";
+import { ReceiptPreview } from "./ReceiptPreview";
 
 export function Checkout() {
   const { products, updateProduct, addProduct } = useProducts();
@@ -25,6 +26,7 @@ export function Checkout() {
   const [taxPct, setTaxPct] = useState("0");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [quickAdd, setQuickAdd] = useState<{
     open: boolean;
     barcode: string;
@@ -147,12 +149,10 @@ export function Checkout() {
     );
     setLastSale(sale);
     setCart([]);
+    setPreviewOpen(true);
     toast.success("Sale recorded");
   };
 
-  const printReceipt = () => {
-    window.print();
-  };
 
   return (
     <>
@@ -254,14 +254,24 @@ export function Checkout() {
             <Receipt className="mr-2 h-4 w-4" /> Checkout
           </Button>
           {lastSale && (
-            <Button variant="outline" className="w-full" onClick={printReceipt}>
-              Print Last Receipt
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setPreviewOpen(true)}
+            >
+              View Last Receipt
             </Button>
           )}
         </aside>
       </div>
 
       {lastSale && <ReceiptView sale={lastSale} shop={shop} />}
+      <ReceiptPreview
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        sale={lastSale}
+        shop={shop}
+      />
       <BarcodeScanner
         open={scannerOpen}
         onOpenChange={setScannerOpen}
