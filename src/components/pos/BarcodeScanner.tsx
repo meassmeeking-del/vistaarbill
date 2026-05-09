@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader, type IScannerControls } from "@zxing/browser";
+import { DecodeHintType, BarcodeFormat } from "@zxing/library";
 import {
   Dialog,
   DialogContent,
@@ -22,11 +23,30 @@ export function BarcodeScanner({ open, onOpenChange, onDetected }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState<string | undefined>();
+  const [lastCode, setLastCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    const reader = new BrowserMultiFormatReader();
+    const hints = new Map();
+    hints.set(DecodeHintType.TRY_HARDER, true);
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.EAN_8,
+      BarcodeFormat.UPC_A,
+      BarcodeFormat.UPC_E,
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.CODE_93,
+      BarcodeFormat.ITF,
+      BarcodeFormat.CODABAR,
+      BarcodeFormat.QR_CODE,
+      BarcodeFormat.DATA_MATRIX,
+    ]);
+    const reader = new BrowserMultiFormatReader(hints, {
+      delayBetweenScanAttempts: 80,
+      delayBetweenScanSuccess: 500,
+    });
     setError(null);
 
     BrowserMultiFormatReader.listVideoInputDevices()
@@ -44,6 +64,7 @@ export function BarcodeScanner({ open, onOpenChange, onDetected }: Props) {
             controlsRef.current = controls;
             if (result) {
               const text = result.getText();
+              setLastCode(text);
               controls.stop();
               onDetected(text);
               onOpenChange(false);
@@ -103,8 +124,11 @@ export function BarcodeScanner({ open, onOpenChange, onDetected }: Props) {
               </select>
             )}
             <p className="text-xs text-muted-foreground text-center">
-              Point camera at a product barcode
+              Barcode ko frame ke beech mein laayein. Achhi roshni mein, 10–20cm door se hold karein. Phone steady rakhein.
             </p>
+            {lastCode && (
+              <p className="text-xs text-center">Last: {lastCode}</p>
+            )}
           </div>
         )}
         <Button variant="outline" onClick={() => onOpenChange(false)}>
