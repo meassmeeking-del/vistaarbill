@@ -4,15 +4,26 @@ import { Checkout } from "./Checkout";
 import { ShopSettings } from "./ShopSettings";
 import { SalesHistory } from "./SalesHistory";
 import { Toaster } from "@/components/ui/sonner";
-import { ShoppingCart, Package, History, Settings } from "lucide-react";
+import { ShoppingCart, Package, History, Settings, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function POSApp() {
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) toast.error(error.message);
+  };
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b bg-card text-card-foreground print:hidden">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-2">
           <ShoppingCart className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-bold">Mobile POS &amp; Billing</h1>
+          <h1 className="text-lg font-bold flex-1">Mobile POS &amp; Billing</h1>
+          <Button variant="ghost" size="sm" onClick={signOut}>
+            <LogOut className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Sign out</span>
+          </Button>
         </div>
       </header>
 
