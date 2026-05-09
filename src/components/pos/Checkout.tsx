@@ -3,13 +3,21 @@ import { useProducts, useShop, useSales, type CartItem, type Sale } from "@/lib/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Minus, Plus, Trash2, Receipt, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { Receipt as ReceiptView } from "./Receipt";
 import { BarcodeScanner } from "./BarcodeScanner";
 
 export function Checkout() {
-  const { products, updateProduct } = useProducts();
+  const { products, updateProduct, addProduct } = useProducts();
   const { shop } = useShop();
   const { addSale } = useSales();
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -17,6 +25,13 @@ export function Checkout() {
   const [taxPct, setTaxPct] = useState("0");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [quickAdd, setQuickAdd] = useState<{
+    open: boolean;
+    barcode: string;
+    name: string;
+    price: string;
+    saveToCatalog: boolean;
+  }>({ open: false, barcode: "", name: "", price: "", saveToCatalog: true });
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -79,9 +94,36 @@ export function Checkout() {
       addToCart(match.id);
       toast.success(`Added: ${match.name}`);
     } else {
-      toast.error(`No product with barcode ${code}`);
-      setSearch(code);
+      setQuickAdd({
+        open: true,
+        barcode: code,
+        name: "",
+        price: "",
+        saveToCatalog: true,
+      });
     }
+  };
+
+  const confirmQuickAdd = () => {
+    const price = parseFloat(quickAdd.price);
+    if (!price || price <= 0) {
+      toast.error("Enter a valid price");
+      return;
+    }
+    const name = quickAdd.name.trim() || `Item ${quickAdd.barcode.slice(-4)}`;
+    const product = {
+      id: crypto.randomUUID(),
+      name,
+      barcode: quickAdd.barcode,
+      price,
+      stock: quickAdd.saveToCatalog ? 1 : 0,
+    };
+    if (quickAdd.saveToCatalog) {
+      addProduct({ name, barcode: quickAdd.barcode, price, stock: 1 });
+    }
+    setCart((prev) => [...prev, { product, quantity: 1 }]);
+    toast.success(`Added: ${name} · ₹${price.toFixed(2)}`);
+    setQuickAdd({ open: false, barcode: "", name: "", price: "", saveToCatalog: true });
   };
 
   const finalizeSale = () => {
@@ -225,6 +267,73 @@ export function Checkout() {
         onOpenChange={setScannerOpen}
         onDetected={handleScanned}
       />
+      <Dialog
+        open={quickAdd.open}
+        onOpenChange={(o) => setQuickAdd((q) => ({ ...q, open: o }))}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New item — enter price</DialogTitle>
+            <DialogDescription>
+              Barcode <span className="font-mono">{quickAdd.barcode}</span> not in catalog.
+              Enter the price to add it to the cart.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="qa-name">Name (optional)</Label>
+              <Input
+                id="qa-name"
+                placeholder="e.g. Biscuit"
+                value={quickAdd.name}
+                onChange={(e) => setQuickAdd({ ...quickAdd, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="qa-price">Price ₹</Label>
+              <Input
+                id="qa-price"
+                type="number"
+                inputMode="decimal"
+                autoFocus
+                placeholder="0.00"
+                value={quickAdd.price}
+                onChange={(e) => setQuickAdd({ ...quickAdd, price: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") confirmQuickAdd();
+                }}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={quickAdd.saveToCatalog}
+                onChange={(e) =>
+                  setQuickAdd({ ...quickAdd, saveToCatalog: e.target.checked })
+                }
+              />
+              Save to product catalog for next time
+            </label>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setQuickAdd({
+                  open: false,
+                  barcode: "",
+                  name: "",
+                  price: "",
+                  saveToCatalog: true,
+                })
+              }
+            >
+              Cancel
+            </Button>
+            <Button onClick={confirmQuickAdd}>Add to cart</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
