@@ -69,16 +69,12 @@ export function BarcodeScanner({ open, onOpenChange, onDetected }: Props) {
                 width: { ideal: 1920 },
                 height: { ideal: 1080 },
                 frameRate: { ideal: 30 },
-                // @ts-expect-error focus mode not in lib
-                focusMode: "continuous",
               }
             : {
                 facingMode: { ideal: "environment" },
                 width: { ideal: 1920 },
                 height: { ideal: 1080 },
                 frameRate: { ideal: 30 },
-                // @ts-expect-error focus mode not in lib
-                focusMode: "continuous",
               },
         };
 
