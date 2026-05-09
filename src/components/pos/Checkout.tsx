@@ -3,9 +3,10 @@ import { useProducts, useShop, useSales, type CartItem, type Sale } from "@/lib/
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Minus, Plus, Trash2, Receipt } from "lucide-react";
+import { Minus, Plus, Trash2, Receipt, ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { Receipt as ReceiptView } from "./Receipt";
+import { BarcodeScanner } from "./BarcodeScanner";
 
 export function Checkout() {
   const { products, updateProduct } = useProducts();
@@ -15,6 +16,7 @@ export function Checkout() {
   const [search, setSearch] = useState("");
   const [taxPct, setTaxPct] = useState("0");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -71,6 +73,17 @@ export function Checkout() {
     }
   };
 
+  const handleScanned = (code: string) => {
+    const match = products.find((p) => p.barcode === code);
+    if (match) {
+      addToCart(match.id);
+      toast.success(`Added: ${match.name}`);
+    } else {
+      toast.error(`No product with barcode ${code}`);
+      setSearch(code);
+    }
+  };
+
   const finalizeSale = () => {
     if (cart.length === 0) {
       toast.error("Cart is empty");
@@ -103,13 +116,19 @@ export function Checkout() {
     <>
       <div className="grid gap-4 lg:grid-cols-[1fr_400px] print:hidden">
         <div className="space-y-3">
-          <Input
-            autoFocus
-            placeholder="Scan barcode or search product (Enter to add)"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={onScanEnter}
-          />
+          <div className="flex gap-2">
+            <Input
+              autoFocus
+              placeholder="Scan barcode or search product (Enter to add)"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={onScanEnter}
+            />
+            <Button variant="outline" onClick={() => setScannerOpen(true)}>
+              <ScanLine className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Scan</span>
+            </Button>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {filtered.map((p) => (
               <button
@@ -201,6 +220,11 @@ export function Checkout() {
       </div>
 
       {lastSale && <ReceiptView sale={lastSale} shop={shop} />}
+      <BarcodeScanner
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onDetected={handleScanned}
+      />
     </>
   );
 }
