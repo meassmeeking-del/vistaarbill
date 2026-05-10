@@ -1,7 +1,7 @@
 {
-  "name": "Mobile POS & Billing",
-  "short_name": "POS Billing",
-  "description": "Mobile POS and billing app for shops",
+  "name": "VistaarBill — POS & Billing",
+  "short_name": "VistaarBill",
+  "description": "Fast mobile POS and billing app for shops with barcode scan, UPI, and PDF receipts.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
