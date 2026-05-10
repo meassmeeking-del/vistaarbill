@@ -31,30 +31,115 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
   };
 
   const handleDownloadPdf = async () => {
-    if (!previewRef.current) return;
     setDownloading(true);
     try {
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf"),
-      ]);
-      const canvas = await html2canvas(previewRef.current, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-      });
-      const imgData = canvas.toDataURL("image/png");
-      // Use 80mm thermal-style width, height from canvas ratio
+      const { default: jsPDF } = await import("jspdf");
       const widthMm = 80;
-      const heightMm = (canvas.height * widthMm) / canvas.width;
+      const margin = 4;
+      const innerWidth = widthMm - margin * 2;
+      // estimate height
+      const lineH = 4;
+      const itemLines = sale.items.length;
+      const estHeight =
+        20 + // header
+        (shop.addressLine1 ? lineH : 0) +
+        (shop.addressLine2 ? lineH : 0) +
+        (shop.phoneNumber ? lineH : 0) +
+        10 + // date row + dividers
+        6 + // table header
+        itemLines * lineH * 2 +
+        20 + // totals
+        (shop.upiId ? lineH : 0) +
+        10; // footer
       const pdf = new jsPDF({
         unit: "mm",
-        format: [widthMm, heightMm],
+        format: [widthMm, Math.max(estHeight, 60)],
         orientation: "portrait",
       });
-      pdf.addImage(imgData, "PNG", 0, 0, widthMm, heightMm);
+
+      let y = margin + 2;
+      const center = widthMm / 2;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(11);
+      pdf.text(shop.name || "My Shop", center, y, { align: "center" });
+      y += lineH + 1;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      if (shop.addressLine1) {
+        pdf.text(shop.addressLine1, center, y, { align: "center" });
+        y += lineH;
+      }
+      if (shop.addressLine2) {
+        pdf.text(shop.addressLine2, center, y, { align: "center" });
+        y += lineH;
+      }
+      if (shop.phoneNumber) {
+        pdf.text(`Ph: ${shop.phoneNumber}`, center, y, { align: "center" });
+        y += lineH;
+      }
+
+      y += 1;
+      pdf.line(margin, y, widthMm - margin, y);
+      y += 3;
+
+      pdf.setFontSize(7);
+      pdf.text(new Date(sale.date).toLocaleString(), margin, y);
+      pdf.text(`#${sale.id.slice(0, 6)}`, widthMm - margin, y, { align: "right" });
+      y += 3;
+      pdf.line(margin, y, widthMm - margin, y);
+      y += 3;
+
+      pdf.setFontSize(8);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Item", margin, y);
+      pdf.text("Qty", widthMm - margin - 18, y, { align: "right" });
+      pdf.text("Total", widthMm - margin, y, { align: "right" });
+      y += lineH;
+      pdf.setFont("helvetica", "normal");
+
+      for (const c of sale.items) {
+        const nameLines = pdf.splitTextToSize(c.product.name, innerWidth - 24);
+        pdf.text(nameLines, margin, y);
+        pdf.text(String(c.quantity), widthMm - margin - 18, y, { align: "right" });
+        pdf.text(
+          `Rs.${(c.product.price * c.quantity).toFixed(2)}`,
+          widthMm - margin,
+          y,
+          { align: "right" },
+        );
+        y += lineH * Math.max(nameLines.length, 1);
+      }
+
+      y += 1;
+      pdf.line(margin, y, widthMm - margin, y);
+      y += 4;
+
+      pdf.text("Subtotal", margin, y);
+      pdf.text(`Rs.${sale.subtotal.toFixed(2)}`, widthMm - margin, y, { align: "right" });
+      y += lineH;
+      pdf.text("Tax", margin, y);
+      pdf.text(`Rs.${sale.tax.toFixed(2)}`, widthMm - margin, y, { align: "right" });
+      y += lineH;
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Total", margin, y);
+      pdf.text(`Rs.${sale.total.toFixed(2)}`, widthMm - margin, y, { align: "right" });
+      pdf.setFont("helvetica", "normal");
+      y += lineH + 2;
+
+      if (shop.upiId) {
+        pdf.setFontSize(7);
+        pdf.text(`UPI: ${shop.upiId}`, center, y, { align: "center" });
+        y += lineH;
+      }
+      pdf.setFontSize(8);
+      pdf.text(shop.footerText || "Thank you!", center, y, { align: "center" });
+
       pdf.save(`receipt-${sale.id.slice(0, 6)}.pdf`);
       toast.success("PDF downloaded");
     } catch (e) {
+      console.error(e);
       toast.error(e instanceof Error ? e.message : "PDF failed");
     } finally {
       setDownloading(false);
