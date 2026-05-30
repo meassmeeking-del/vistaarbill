@@ -156,17 +156,22 @@ export function Checkout() {
 
   return (
     <>
-      <div className="grid gap-4 lg:grid-cols-[1fr_400px] print:hidden">
+      <div className="grid gap-4 lg:grid-cols-[1fr_400px] print:hidden mt-4 sm:mt-0">
         <div className="space-y-3">
-          <div className="flex gap-2">
+          <div className="flex gap-2 rounded-xl bg-card border p-2 shadow-sm">
             <Input
               autoFocus
-              placeholder="Scan barcode or search product (Enter to add)"
+              placeholder="Scan barcode or search product…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={onScanEnter}
+              className="border-0 focus-visible:ring-0 shadow-none h-10"
             />
-            <Button variant="outline" onClick={() => setScannerOpen(true)}>
+            <Button
+              onClick={() => setScannerOpen(true)}
+              className="h-10"
+              style={{ background: "var(--gradient-primary)" }}
+            >
               <ScanLine className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Scan</span>
             </Button>
@@ -176,30 +181,51 @@ export function Checkout() {
               <button
                 key={p.id}
                 onClick={() => addToCart(p.id)}
-                className="rounded-lg border bg-card text-card-foreground p-3 text-left hover:border-primary transition-colors"
+                className="group rounded-xl border bg-card text-card-foreground p-3 text-left hover:border-primary hover:shadow-md hover:-translate-y-0.5 transition-all"
               >
-                <div className="font-medium text-sm leading-tight">{p.name}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  ₹{p.price.toFixed(2)} · stock {p.stock}
+                <div className="font-medium text-sm leading-tight line-clamp-2 min-h-[2.5rem]">
+                  {p.name}
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-sm font-bold text-primary">₹{p.price.toFixed(2)}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      p.stock <= 3 ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {p.stock} left
+                  </span>
                 </div>
               </button>
             ))}
             {filtered.length === 0 && (
-              <p className="col-span-full text-sm text-muted-foreground">No products</p>
+              <p className="col-span-full text-sm text-muted-foreground text-center py-8">
+                No products. Add items in Products tab.
+              </p>
             )}
           </div>
         </div>
 
-        <aside className="rounded-lg border bg-card text-card-foreground p-4 space-y-3 h-fit">
-          <h3 className="font-semibold">Cart ({cart.length})</h3>
+        <aside className="rounded-2xl border bg-card text-card-foreground p-4 space-y-3 h-fit shadow-sm lg:sticky lg:top-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-primary" /> Cart
+            </h3>
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+              {cart.length} items
+            </span>
+          </div>
           <div className="space-y-2 max-h-80 overflow-y-auto">
             {cart.length === 0 && (
-              <p className="text-sm text-muted-foreground">Cart is empty</p>
+              <div className="text-center py-8 text-muted-foreground">
+                <Receipt className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Cart is empty</p>
+              </div>
             )}
             {cart.map((c) => (
               <div
                 key={c.product.id}
-                className="flex items-center gap-2 border-b pb-2 last:border-0"
+                className="flex items-center gap-1 border-b pb-2 last:border-0"
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{c.product.name}</div>
@@ -208,15 +234,19 @@ export function Checkout() {
                     {(c.product.price * c.quantity).toFixed(2)}
                   </div>
                 </div>
-                <Button size="icon" variant="ghost" onClick={() => changeQty(c.product.id, -1)}>
-                  <Minus className="h-3 w-3" />
-                </Button>
-                <Button size="icon" variant="ghost" onClick={() => changeQty(c.product.id, 1)}>
-                  <Plus className="h-3 w-3" />
-                </Button>
+                <div className="flex items-center bg-muted rounded-lg">
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => changeQty(c.product.id, -1)}>
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <span className="text-xs font-semibold w-5 text-center">{c.quantity}</span>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => changeQty(c.product.id, 1)}>
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
                 <Button
                   size="icon"
                   variant="ghost"
+                  className="h-7 w-7"
                   onClick={() => removeItem(c.product.id)}
                 >
                   <Trash2 className="h-3 w-3 text-destructive" />
@@ -237,21 +267,25 @@ export function Checkout() {
             />
           </div>
           <div className="space-y-1 text-sm border-t pt-3">
-            <div className="flex justify-between">
+            <div className="flex justify-between text-muted-foreground">
               <span>Subtotal</span>
               <span>₹{subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between text-muted-foreground">
               <span>Tax</span>
               <span>₹{tax.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between font-bold text-base pt-1">
+            <div className="flex justify-between font-bold text-lg pt-2 border-t mt-2">
               <span>Total</span>
-              <span>₹{total.toFixed(2)}</span>
+              <span className="text-primary">₹{total.toFixed(2)}</span>
             </div>
           </div>
-          <Button className="w-full" onClick={finalizeSale}>
-            <Receipt className="mr-2 h-4 w-4" /> Checkout
+          <Button
+            className="w-full h-11 text-base font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
+            onClick={finalizeSale}
+            style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
+          >
+            <Receipt className="mr-2 h-4 w-4" /> Checkout · ₹{total.toFixed(2)}
           </Button>
           {lastSale && (
             <Button
