@@ -16,11 +16,21 @@ export function POSApp() {
   };
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b bg-card text-card-foreground print:hidden">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-2">
-          <ShoppingCart className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-bold flex-1">Mobile POS &amp; Billing</h1>
-          <Button variant="ghost" size="sm" onClick={signOut}>
+      <header
+        className="text-primary-foreground shadow-lg print:hidden"
+        style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
+      >
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center gap-2">
+          <div className="h-9 w-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+            <ShoppingCart className="h-5 w-5" />
+          </div>
+          <h1 className="text-xl font-bold flex-1 tracking-tight">VistaarBill</h1>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={signOut}
+            className="text-primary-foreground hover:bg-white/20 hover:text-primary-foreground"
+          >
             <LogOut className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Sign out</span>
           </Button>
