@@ -30,13 +30,20 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10">
-              <ShoppingCart className="h-6 w-6 text-primary" />
+      <div
+        className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+        style={{ background: "var(--gradient-hero)" }}
+      >
+        <div className="absolute inset-0 bg-background/10 backdrop-blur-3xl" />
+        <div className="relative w-full max-w-md space-y-6 bg-card/95 backdrop-blur-xl rounded-2xl p-8 border shadow-2xl">
+          <div className="text-center space-y-3">
+            <div
+              className="inline-flex items-center justify-center h-14 w-14 rounded-2xl text-primary-foreground"
+              style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
+            >
+              <ShoppingCart className="h-7 w-7" />
             </div>
-            <h1 className="text-2xl font-bold">Mobile POS &amp; Billing</h1>
+            <h1 className="text-3xl font-bold tracking-tight">VistaarBill</h1>
             <p className="text-sm text-muted-foreground">
               Sign in to manage your shop
             </p>
