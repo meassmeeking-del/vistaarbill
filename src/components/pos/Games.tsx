@@ -108,7 +108,7 @@ function SnakeGame() {
         className="relative border-2 border-primary/30 rounded-xl overflow-hidden bg-card select-none"
         style={{ width: "min(320px, 90vw)", aspectRatio: "1" }}
       >
-        <div className="grid grid-cols-15 w-full h-full">
+        <div className="grid w-full h-full" style={{ gridTemplateColumns: `repeat(${SNAKE_GRID}, 1fr)` }}>
           {Array.from({ length: SNAKE_GRID * SNAKE_GRID }).map((_, i) => {
             const x = i % SNAKE_GRID;
             const y = Math.floor(i / SNAKE_GRID);
