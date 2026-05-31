@@ -98,13 +98,16 @@ export function POSApp() {
             <TabsContent value="sales">
               <SalesHistory />
             </TabsContent>
+            <TabsContent value="games">
+              <Games />
+            </TabsContent>
             <TabsContent value="settings">
               <ShopSettings />
             </TabsContent>
           </div>
 
           {/* Mobile bottom nav */}
-          <TabsList className="sm:hidden fixed bottom-0 left-0 right-0 z-40 grid grid-cols-4 bg-card/95 backdrop-blur border-t rounded-none h-16 p-1">
+          <TabsList className="sm:hidden fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 bg-card/95 backdrop-blur border-t rounded-none h-16 p-1">
             <TabsTrigger value="checkout" className="flex-col gap-0.5 h-full rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
               <ShoppingCart className="h-5 w-5" />
               <span className="text-[10px]">Bill</span>
@@ -116,6 +119,10 @@ export function POSApp() {
             <TabsTrigger value="sales" className="flex-col gap-0.5 h-full rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
               <History className="h-5 w-5" />
               <span className="text-[10px]">Sales</span>
+            </TabsTrigger>
+            <TabsTrigger value="games" className="flex-col gap-0.5 h-full rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+              <Gamepad2 className="h-5 w-5" />
+              <span className="text-[10px]">Fun</span>
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex-col gap-0.5 h-full rounded-lg data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
               <Settings className="h-5 w-5" />
