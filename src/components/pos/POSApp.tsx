@@ -71,7 +71,7 @@ export function POSApp() {
 
       <main className="max-w-6xl mx-auto px-4 -mt-4 pb-24 sm:pb-6">
         <Tabs defaultValue="checkout" className="print:hidden">
-          <TabsList className="hidden sm:grid grid-cols-4 w-full max-w-2xl bg-card border shadow-sm rounded-xl p-1 h-auto">
+          <TabsList className="hidden sm:grid grid-cols-5 w-full max-w-3xl bg-card border shadow-sm rounded-xl p-1 h-auto">
             <TabsTrigger value="checkout" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg">
               <ShoppingCart className="h-4 w-4 mr-2" /> Checkout
             </TabsTrigger>
@@ -80,6 +80,9 @@ export function POSApp() {
             </TabsTrigger>
             <TabsTrigger value="sales" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg">
               <History className="h-4 w-4 mr-2" /> Sales
+            </TabsTrigger>
+            <TabsTrigger value="games" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg">
+              <Gamepad2 className="h-4 w-4 mr-2" /> Fun
             </TabsTrigger>
             <TabsTrigger value="settings" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg">
               <Settings className="h-4 w-4 mr-2" /> Settings
