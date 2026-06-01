@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Trophy, RotateCcw, Gamepad2, Target, Sparkles, CheckCircle2 } from "lucide-react";
@@ -11,159 +11,213 @@ import {
   type ChallengeTask,
 } from "@/lib/daily-challenge";
 
-/* ===================== Snake Game ===================== */
-type Point = { x: number; y: number };
-const SNAKE_GRID = 15;
-const SNAKE_SPEED = 150;
+/* ===================== Candy Crush Game ===================== */
+const CANDIES = ["🍬", "🍫", "🍭", "🍩", "🧁", "🍪"];
+const CG_SIZE = 8;
+const CG_MOVES = 20;
 
-function SnakeGame() {
-  const [snake, setSnake] = useState<Point[]>([{ x: 7, y: 7 }]);
-  const [food, setFood] = useState<Point>({ x: 3, y: 3 });
-  const [dir, setDir] = useState<Point>({ x: 0, y: -1 });
-  const [gameOver, setGameOver] = useState(false);
+type Grid = string[][];
+
+const randCandy = () => CANDIES[Math.floor(Math.random() * CANDIES.length)];
+
+const findMatches = (g: Grid): boolean[][] => {
+  const m: boolean[][] = Array.from({ length: CG_SIZE }, () => Array(CG_SIZE).fill(false));
+  for (let r = 0; r < CG_SIZE; r++) {
+    for (let c = 0; c < CG_SIZE - 2; c++) {
+      const v = g[r][c];
+      if (v && v === g[r][c + 1] && v === g[r][c + 2]) {
+        m[r][c] = m[r][c + 1] = m[r][c + 2] = true;
+      }
+    }
+  }
+  for (let c = 0; c < CG_SIZE; c++) {
+    for (let r = 0; r < CG_SIZE - 2; r++) {
+      const v = g[r][c];
+      if (v && v === g[r + 1][c] && v === g[r + 2][c]) {
+        m[r][c] = m[r + 1][c] = m[r + 2][c] = true;
+      }
+    }
+  }
+  return m;
+};
+
+const countMatches = (m: boolean[][]) =>
+  m.reduce((a, row) => a + row.filter(Boolean).length, 0);
+
+const buildInitialGrid = (): Grid => {
+  // Generate a grid with no initial matches
+  while (true) {
+    const g: Grid = Array.from({ length: CG_SIZE }, () =>
+      Array.from({ length: CG_SIZE }, () => randCandy()),
+    );
+    if (countMatches(findMatches(g)) === 0) return g;
+  }
+};
+
+const cloneGrid = (g: Grid): Grid => g.map((row) => [...row]);
+
+const collapseGrid = (g: Grid, m: boolean[][]): Grid => {
+  const ng = cloneGrid(g);
+  for (let c = 0; c < CG_SIZE; c++) {
+    const stack: string[] = [];
+    for (let r = CG_SIZE - 1; r >= 0; r--) {
+      if (!m[r][c]) stack.push(ng[r][c]);
+    }
+    while (stack.length < CG_SIZE) stack.push(randCandy());
+    for (let r = CG_SIZE - 1, i = 0; r >= 0; r--, i++) {
+      ng[r][c] = stack[i];
+    }
+  }
+  return ng;
+};
+
+function CandyGame() {
+  const [grid, setGrid] = useState<Grid>(() => buildInitialGrid());
+  const [selected, setSelected] = useState<{ r: number; c: number } | null>(null);
   const [score, setScore] = useState(0);
+  const [moves, setMoves] = useState(CG_MOVES);
+  const [busy, setBusy] = useState(false);
   const [highScore, setHighScore] = useState(() => {
     if (typeof window === "undefined") return 0;
-    return Number(window.localStorage.getItem("snake_high") || 0);
+    return Number(window.localStorage.getItem("candy_high") || 0);
   });
-  const [running, setRunning] = useState(true);
-  const dirRef = useRef(dir);
-  dirRef.current = dir;
+  const [matchedCells, setMatchedCells] = useState<boolean[][] | null>(null);
 
-  const randomFood = useCallback((currentSnake: Point[]) => {
-    let p: Point;
-    do {
-      p = { x: Math.floor(Math.random() * SNAKE_GRID), y: Math.floor(Math.random() * SNAKE_GRID) };
-    } while (currentSnake.some((s) => s.x === p.x && s.y === p.y));
-    return p;
-  }, []);
+  const gameOver = moves <= 0;
 
   const reset = useCallback(() => {
-    const start = [{ x: 7, y: 7 }];
-    setSnake(start);
-    setFood(randomFood(start));
-    setDir({ x: 0, y: -1 });
-    setGameOver(false);
+    setGrid(buildInitialGrid());
+    setSelected(null);
     setScore(0);
-    setRunning(true);
-  }, [randomFood]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      e.preventDefault();
-      const d = dirRef.current;
-      switch (e.key) {
-        case "ArrowUp":
-          if (d.y === 0) setDir({ x: 0, y: -1 });
-          break;
-        case "ArrowDown":
-          if (d.y === 0) setDir({ x: 0, y: 1 });
-          break;
-        case "ArrowLeft":
-          if (d.x === 0) setDir({ x: -1, y: 0 });
-          break;
-        case "ArrowRight":
-          if (d.x === 0) setDir({ x: 1, y: 0 });
-          break;
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    setMoves(CG_MOVES);
+    setBusy(false);
+    setMatchedCells(null);
   }, []);
 
-  useEffect(() => {
-    if (!running || gameOver) return;
-    const id = setInterval(() => {
-      setSnake((prev) => {
-        const head = prev[0];
-        const next: Point = {
-          x: (head.x + dirRef.current.x + SNAKE_GRID) % SNAKE_GRID,
-          y: (head.y + dirRef.current.y + SNAKE_GRID) % SNAKE_GRID,
-        };
-        if (prev.some((s) => s.x === next.x && s.y === next.y)) {
-          setGameOver(true);
-          setRunning(false);
-          return prev;
-        }
-        const ate = next.x === food.x && next.y === food.y;
-        const nextSnake = ate ? [next, ...prev] : [next, ...prev.slice(0, -1)];
-        if (ate) {
-          setScore((s) => {
-            const ns = s + 10;
-            if (ns > highScore) {
-              setHighScore(ns);
-              window.localStorage.setItem("snake_high", String(ns));
-            }
-            recordProgress("snake", ns, "max");
-            return ns;
-          });
-          setFood(randomFood(nextSnake));
-        }
-        return nextSnake;
-      });
-    }, SNAKE_SPEED);
-    return () => clearInterval(id);
-  }, [running, gameOver, food, highScore, randomFood]);
+  const cascade = useCallback(
+    async (start: Grid) => {
+      let cur = start;
+      let combo = 0;
+      while (true) {
+        const m = findMatches(cur);
+        const n = countMatches(m);
+        if (n === 0) break;
+        combo++;
+        setMatchedCells(m);
+        setGrid(cur);
+        await new Promise((res) => setTimeout(res, 260));
+        const gained = n * 10 * combo;
+        setScore((s) => {
+          const ns = s + gained;
+          if (ns > highScore) {
+            setHighScore(ns);
+            window.localStorage.setItem("candy_high", String(ns));
+          }
+          recordProgress("snake", ns, "max");
+          return ns;
+        });
+        cur = collapseGrid(cur, m);
+        setMatchedCells(null);
+        setGrid(cur);
+        await new Promise((res) => setTimeout(res, 200));
+      }
+    },
+    [highScore],
+  );
 
-  const cellSize = "w-[calc(100%/15)] aspect-square";
+  const trySwap = useCallback(
+    async (a: { r: number; c: number }, b: { r: number; c: number }) => {
+      const adj = Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1;
+      if (!adj) {
+        setSelected(b);
+        return;
+      }
+      setBusy(true);
+      const ng = cloneGrid(grid);
+      [ng[a.r][a.c], ng[b.r][b.c]] = [ng[b.r][b.c], ng[a.r][a.c]];
+      setGrid(ng);
+      await new Promise((res) => setTimeout(res, 150));
+      const m = findMatches(ng);
+      if (countMatches(m) === 0) {
+        // revert
+        [ng[a.r][a.c], ng[b.r][b.c]] = [ng[b.r][b.c], ng[a.r][a.c]];
+        setGrid([...ng]);
+        setSelected(null);
+        setBusy(false);
+        return;
+      }
+      setMoves((mv) => mv - 1);
+      await cascade(ng);
+      setSelected(null);
+      setBusy(false);
+    },
+    [grid, cascade],
+  );
+
+  const onCell = (r: number, c: number) => {
+    if (busy || gameOver) return;
+    if (!selected) {
+      setSelected({ r, c });
+      return;
+    }
+    if (selected.r === r && selected.c === c) {
+      setSelected(null);
+      return;
+    }
+    void trySwap(selected, { r, c });
+  };
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="flex items-center gap-4 text-sm w-full justify-between px-1">
+    <div className="flex flex-col items-center gap-3 w-full">
+      <div className="flex items-center gap-4 text-sm w-full justify-between px-1 max-w-[360px]">
         <span className="font-semibold text-primary">Score: {score}</span>
+        <span className="text-foreground">Moves: {moves}</span>
         <span className="text-muted-foreground">Best: {highScore}</span>
       </div>
       <div
-        className="relative border-2 border-primary/30 rounded-xl overflow-hidden bg-card select-none"
-        style={{ width: "min(320px, 90vw)", aspectRatio: "1" }}
+        className="relative border-2 border-primary/30 rounded-xl overflow-hidden bg-card p-1.5 select-none"
+        style={{ width: "min(360px, 92vw)", aspectRatio: "1" }}
       >
-        <div className="grid w-full h-full" style={{ gridTemplateColumns: `repeat(${SNAKE_GRID}, 1fr)` }}>
-          {Array.from({ length: SNAKE_GRID * SNAKE_GRID }).map((_, i) => {
-            const x = i % SNAKE_GRID;
-            const y = Math.floor(i / SNAKE_GRID);
-            const isSnake = snake.some((s) => s.x === x && s.y === y);
-            const isHead = snake[0].x === x && snake[0].y === y;
-            const isFood = food.x === x && food.y === y;
-            return (
-              <div
-                key={i}
-                className={`
-                  ${cellSize}
-                  ${isHead ? "bg-primary rounded-sm" : ""}
-                  ${isSnake && !isHead ? "bg-primary/60 rounded-sm" : ""}
-                  ${isFood ? "bg-destructive rounded-full scale-75" : ""}
-                  ${!isSnake && !isFood ? "bg-muted/30" : ""}
-                `}
-              />
-            );
-          })}
+        <div
+          className="grid w-full h-full gap-1"
+          style={{ gridTemplateColumns: `repeat(${CG_SIZE}, 1fr)` }}
+        >
+          {grid.map((row, r) =>
+            row.map((candy, c) => {
+              const isSel = selected?.r === r && selected?.c === c;
+              const isMatch = matchedCells?.[r]?.[c];
+              return (
+                <button
+                  key={`${r}-${c}`}
+                  onClick={() => onCell(r, c)}
+                  className={`
+                    aspect-square rounded-lg flex items-center justify-center
+                    text-[clamp(1.1rem,4vw,1.6rem)] transition-all duration-200
+                    ${isSel ? "bg-primary/30 ring-2 ring-primary scale-95" : "bg-muted/40 hover:bg-muted/70"}
+                    ${isMatch ? "scale-50 opacity-30 bg-primary/50" : ""}
+                    active:scale-90
+                  `}
+                >
+                  {candy}
+                </button>
+              );
+            }),
+          )}
         </div>
-        {(gameOver || !running) && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
-            {gameOver && <p className="text-xl font-bold text-destructive">Game Over!</p>}
-            <p className="text-sm text-muted-foreground">Score: {score}</p>
+        {gameOver && (
+          <div className="absolute inset-0 bg-background/85 backdrop-blur-sm flex flex-col items-center justify-center gap-2 rounded-xl">
+            <Trophy className="h-8 w-8 text-primary" />
+            <p className="text-xl font-bold text-primary">Sweet!</p>
+            <p className="text-sm text-muted-foreground">Final Score: {score}</p>
             <Button size="sm" onClick={reset} className="mt-1">
               <RotateCcw className="h-4 w-4 mr-1" /> Play Again
             </Button>
           </div>
         )}
       </div>
-      <div className="grid grid-cols-3 gap-1.5 max-w-[200px] w-full">
-        <div />
-        <Button size="sm" variant="outline" onClick={() => dir.y === 0 && setDir({ x: 0, y: -1 })}>
-          ↑
-        </Button>
-        <div />
-        <Button size="sm" variant="outline" onClick={() => dir.x === 0 && setDir({ x: -1, y: 0 })}>
-          ←
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => dir.y === 0 && setDir({ x: 0, y: 1 })}>
-          ↓
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => dir.x === 0 && setDir({ x: 1, y: 0 })}>
-          →
-        </Button>
-      </div>
+      <p className="text-xs text-muted-foreground text-center max-w-[300px]">
+        Tap a candy, then tap an adjacent one to swap. Match 3+ in a row/column to crush!
+      </p>
     </div>
   );
 }
@@ -452,10 +506,10 @@ export function Games() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Card className="cursor-pointer hover:border-primary/60 transition-colors" onClick={() => setActive("snake")}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">🐍 Snake Game</CardTitle>
+              <CardTitle className="text-base">🍬 Candy Crush</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-xs text-muted-foreground">Classic snake. Eat food, grow long. Arrows ya buttons se control.</p>
+              <p className="text-xs text-muted-foreground">Match 3 ya zyada candies ek line me. 20 moves me max score banao!</p>
             </CardContent>
           </Card>
           <Card className="cursor-pointer hover:border-primary/60 transition-colors" onClick={() => setActive("rps")}>
