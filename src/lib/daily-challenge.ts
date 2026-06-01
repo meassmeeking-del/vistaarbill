@@ -26,7 +26,7 @@ export function getDailyTasks(): ChallengeTask[] {
   return [
     {
       id: "snake",
-      label: "Snake score",
+      label: "Candy Crush score",
       target: snakeTargets[s % snakeTargets.length],
       reward: 20,
       unit: "pts",
