@@ -540,10 +540,10 @@ export function Games() {
           <ArrowLeft className="h-4 w-4 mr-1" /> Back
         </Button>
         <h2 className="text-base font-bold">
-          {active === "snake" ? "🐍 Snake Game" : active === "rps" ? "✊ Rock Paper Scissors" : "🧠 Memory Match"}
+          {active === "snake" ? "🍬 Candy Crush" : active === "rps" ? "✊ Rock Paper Scissors" : "🧠 Memory Match"}
         </h2>
       </div>
-      {active === "snake" && <SnakeGame />}
+      {active === "snake" && <CandyGame />}
       {active === "rps" && <RPSGame />}
       {active === "memory" && <MemoryGame />}
     </div>
