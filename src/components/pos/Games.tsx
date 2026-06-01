@@ -1,7 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trophy, RotateCcw, Gamepad2 } from "lucide-react";
+import { ArrowLeft, Trophy, RotateCcw, Gamepad2, Target, Sparkles, CheckCircle2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import {
+  claimReward,
+  recordProgress,
+  useDailyChallenge,
+  type ChallengeTask,
+} from "@/lib/daily-challenge";
 
 /* ===================== Snake Game ===================== */
 type Point = { x: number; y: number };
@@ -86,6 +94,7 @@ function SnakeGame() {
               setHighScore(ns);
               window.localStorage.setItem("snake_high", String(ns));
             }
+            recordProgress("snake", ns, "max");
             return ns;
           });
           setFood(randomFood(nextSnake));
@@ -190,7 +199,11 @@ function RPSGame() {
       (choice === "scissors" && c === "paper")
     ) {
       setResult("win");
-      setWins((w) => w + 1);
+      setWins((w) => {
+        const nw = w + 1;
+        recordProgress("rps", nw, "max");
+        return nw;
+      });
     } else {
       setResult("lose");
       setLosses((l) => l + 1);
@@ -288,11 +301,13 @@ function MemoryGame() {
         if (next.every((c) => c.matched)) {
           setGameWon(true);
           setMoves((m) => {
-            if (bestMoves === 0 || m + 1 < bestMoves) {
-              setBestMoves(m + 1);
-              window.localStorage.setItem("memory_best", String(m + 1));
+            const final = m + 1;
+            if (bestMoves === 0 || final < bestMoves) {
+              setBestMoves(final);
+              window.localStorage.setItem("memory_best", String(final));
             }
-            return m + 1;
+            recordProgress("memory", final, "min");
+            return final;
           });
         }
       } else {
@@ -356,6 +371,7 @@ export function Games() {
           <h2 className="text-lg font-bold text-foreground">Mini Games</h2>
         </div>
         <p className="text-sm text-muted-foreground -mt-2">Bore ho raha hai? Khelo!</p>
+        <DailyChallenge />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Card className="cursor-pointer hover:border-primary/60 transition-colors" onClick={() => setActive("snake")}>
             <CardHeader className="pb-2">
