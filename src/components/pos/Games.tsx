@@ -360,6 +360,83 @@ function MemoryGame() {
 }
 
 /* ===================== Game Selector ===================== */
+function DailyChallenge() {
+  const { state, boost, tasks } = useDailyChallenge();
+
+  const taskStatus = (t: ChallengeTask) => {
+    const p = state.progress[t.id] ?? (t.mode === "lte" ? 0 : 0);
+    const done = t.mode === "gte" ? p >= t.target : p > 0 && p <= t.target;
+    const pct =
+      t.mode === "gte"
+        ? Math.min(100, Math.round(((p || 0) / t.target) * 100))
+        : p > 0
+          ? Math.min(100, Math.round((t.target / p) * 100))
+          : 0;
+    return { p, done, pct, claimed: !!state.claimed[t.id] };
+  };
+
+  const onClaim = (t: ChallengeTask) => {
+    if (claimReward(t)) {
+      toast.success(`+${t.reward} boost claimed!`, { description: t.label });
+    } else {
+      toast.error("Complete the target first!");
+    }
+  };
+
+  return (
+    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Target className="h-4 w-4 text-primary" />
+            Daily Challenge
+          </CardTitle>
+          <div className="flex items-center gap-1 text-sm font-bold text-primary">
+            <Sparkles className="h-4 w-4" />
+            {boost} boost
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Naye challenges roz reset honge. Pura karo, reward lo!
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {tasks.map((t) => {
+          const { p, done, pct, claimed } = taskStatus(t);
+          return (
+            <div key={t.id} className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium">
+                  {t.label}{" "}
+                  <span className="text-muted-foreground">
+                    ({t.mode === "gte" ? `${p || 0}/${t.target}` : `best ${p || "—"}, target ≤${t.target}`} {t.unit})
+                  </span>
+                </span>
+                {claimed ? (
+                  <span className="flex items-center gap-1 text-green-500 font-semibold">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> +{t.reward}
+                  </span>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant={done ? "default" : "outline"}
+                    disabled={!done}
+                    className="h-6 px-2 text-xs"
+                    onClick={() => onClaim(t)}
+                  >
+                    Claim +{t.reward}
+                  </Button>
+                )}
+              </div>
+              <Progress value={pct} className="h-1.5" />
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function Games() {
   const [active, setActive] = useState<"menu" | "snake" | "rps" | "memory">("menu");
 
