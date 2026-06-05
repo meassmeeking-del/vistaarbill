@@ -4,6 +4,7 @@ import { Checkout } from "./Checkout";
 import { ShopSettings } from "./ShopSettings";
 import { SalesHistory } from "./SalesHistory";
 import { Games } from "./Games";
+import { AIChatBubble } from "./AIChatBubble";
 import { Toaster } from "@/components/ui/sonner";
 import { ShoppingCart, Package, History, Settings, LogOut, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -132,6 +133,7 @@ export function POSApp() {
         </Tabs>
       </main>
       <Toaster />
+      <AIChatBubble />
     </div>
   );
 }

@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trophy, RotateCcw, Gamepad2, Target, Sparkles, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Trophy, RotateCcw, Gamepad2, Target, Sparkles, CheckCircle2, Volume2, VolumeX } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { haptic, sfx, setMuted, isMuted } from "@/lib/juice";
 import {
   claimReward,
   recordProgress,
@@ -82,6 +83,11 @@ function CandyGame() {
     return Number(window.localStorage.getItem("candy_high") || 0);
   });
   const [matchedCells, setMatchedCells] = useState<boolean[][] | null>(null);
+  const [newCells, setNewCells] = useState<boolean[][] | null>(null);
+  const [combos, setCombos] = useState<{ id: number; text: string }[]>([]);
+  const [sparks, setSparks] = useState<{ id: number; r: number; c: number; dx: number; dy: number }[]>([]);
+  const [muted, setMutedState] = useState(() => isMuted());
+  const idRef = useRef(0);
 
   const gameOver = moves <= 0;
 
@@ -92,6 +98,33 @@ function CandyGame() {
     setMoves(CG_MOVES);
     setBusy(false);
     setMatchedCells(null);
+    setNewCells(null);
+    setCombos([]);
+    setSparks([]);
+  }, []);
+
+  const burstSparks = useCallback((m: boolean[][]) => {
+    const next: { id: number; r: number; c: number; dx: number; dy: number }[] = [];
+    for (let r = 0; r < CG_SIZE; r++) {
+      for (let c = 0; c < CG_SIZE; c++) {
+        if (!m[r][c]) continue;
+        for (let k = 0; k < 4; k++) {
+          const ang = (Math.PI * 2 * k) / 4 + Math.random();
+          const dist = 22 + Math.random() * 18;
+          next.push({
+            id: ++idRef.current,
+            r,
+            c,
+            dx: Math.cos(ang) * dist,
+            dy: Math.sin(ang) * dist,
+          });
+        }
+      }
+    }
+    setSparks((s) => [...s, ...next]);
+    setTimeout(() => {
+      setSparks((s) => s.filter((x) => !next.find((n) => n.id === x.id)));
+    }, 550);
   }, []);
 
   const cascade = useCallback(
@@ -105,7 +138,15 @@ function CandyGame() {
         combo++;
         setMatchedCells(m);
         setGrid(cur);
-        await new Promise((res) => setTimeout(res, 260));
+        sfx.match(combo);
+        haptic(combo > 1 ? [12, 30, 18] : 18);
+        burstSparks(m);
+        if (combo >= 2) {
+          const id = ++idRef.current;
+          setCombos((cs) => [...cs, { id, text: `Combo x${combo}!` }]);
+          setTimeout(() => setCombos((cs) => cs.filter((x) => x.id !== id)), 900);
+        }
+        await new Promise((res) => setTimeout(res, 380));
         const gained = n * 10 * combo;
         setScore((s) => {
           const ns = s + gained;
@@ -118,11 +159,13 @@ function CandyGame() {
         });
         cur = collapseGrid(cur, m);
         setMatchedCells(null);
+        setNewCells(m);
         setGrid(cur);
-        await new Promise((res) => setTimeout(res, 200));
+        await new Promise((res) => setTimeout(res, 280));
+        setNewCells(null);
       }
     },
-    [highScore],
+    [highScore, burstSparks],
   );
 
   const trySwap = useCallback(
@@ -130,13 +173,16 @@ function CandyGame() {
       const adj = Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1;
       if (!adj) {
         setSelected(b);
+        sfx.select();
         return;
       }
       setBusy(true);
+      sfx.swap();
+      haptic(10);
       const ng = cloneGrid(grid);
       [ng[a.r][a.c], ng[b.r][b.c]] = [ng[b.r][b.c], ng[a.r][a.c]];
       setGrid(ng);
-      await new Promise((res) => setTimeout(res, 150));
+      await new Promise((res) => setTimeout(res, 180));
       const m = findMatches(ng);
       if (countMatches(m) === 0) {
         // revert
@@ -144,20 +190,28 @@ function CandyGame() {
         setGrid([...ng]);
         setSelected(null);
         setBusy(false);
+        sfx.invalid();
+        haptic([8, 40, 8]);
         return;
       }
       setMoves((mv) => mv - 1);
       await cascade(ng);
       setSelected(null);
       setBusy(false);
+      if (moves - 1 <= 0) {
+        sfx.win();
+        haptic([20, 40, 20, 40, 60]);
+      }
     },
-    [grid, cascade],
+    [grid, cascade, moves],
   );
 
   const onCell = (r: number, c: number) => {
     if (busy || gameOver) return;
     if (!selected) {
       setSelected({ r, c });
+      sfx.select();
+      haptic(8);
       return;
     }
     if (selected.r === r && selected.c === c) {
@@ -167,12 +221,25 @@ function CandyGame() {
     void trySwap(selected, { r, c });
   };
 
+  const toggleMute = () => {
+    const next = !muted;
+    setMuted(next);
+    setMutedState(next);
+  };
+
   return (
     <div className="flex flex-col items-center gap-3 w-full">
-      <div className="flex items-center gap-4 text-sm w-full justify-between px-1 max-w-[360px]">
+      <div className="flex items-center gap-3 text-sm w-full justify-between px-1 max-w-[360px]">
         <span className="font-semibold text-primary">Score: {score}</span>
         <span className="text-foreground">Moves: {moves}</span>
         <span className="text-muted-foreground">Best: {highScore}</span>
+        <button
+          onClick={toggleMute}
+          className="p-1 rounded-md hover:bg-muted text-muted-foreground"
+          aria-label={muted ? "Unmute" : "Mute"}
+        >
+          {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+        </button>
       </div>
       <div
         className="relative border-2 border-primary/30 rounded-xl overflow-hidden bg-card p-1.5 select-none"
@@ -186,24 +253,48 @@ function CandyGame() {
             row.map((candy, c) => {
               const isSel = selected?.r === r && selected?.c === c;
               const isMatch = matchedCells?.[r]?.[c];
+              const isNew = newCells?.[r]?.[c];
               return (
                 <button
                   key={`${r}-${c}`}
                   onClick={() => onCell(r, c)}
                   className={`
-                    aspect-square rounded-lg flex items-center justify-center
-                    text-[clamp(1.1rem,4vw,1.6rem)] transition-all duration-200
-                    ${isSel ? "bg-primary/30 ring-2 ring-primary scale-95" : "bg-muted/40 hover:bg-muted/70"}
-                    ${isMatch ? "scale-50 opacity-30 bg-primary/50" : ""}
+                    relative candy-cell aspect-square rounded-lg flex items-center justify-center
+                    text-[clamp(1.1rem,4vw,1.7rem)] transition-colors duration-150
+                    ${isSel ? "bg-primary/30 ring-2 ring-primary candy-selected" : "bg-muted/40 hover:bg-muted/70"}
+                    ${isMatch ? "bg-primary/60" : ""}
                     active:scale-90
                   `}
                 >
-                  {candy}
+                  <span
+                    className={`inline-block ${isMatch ? "candy-pop" : isNew ? "candy-drop" : ""}`}
+                  >
+                    {candy}
+                  </span>
+                  {sparks
+                    .filter((s) => s.r === r && s.c === c)
+                    .map((s) => (
+                      <span
+                        key={s.id}
+                        className="spark"
+                        style={
+                          {
+                            ["--dx" as string]: `${s.dx}px`,
+                            ["--dy" as string]: `${s.dy}px`,
+                          } as React.CSSProperties
+                        }
+                      />
+                    ))}
                 </button>
               );
             }),
           )}
         </div>
+        {combos.map((cb) => (
+          <span key={cb.id} className="combo-pop text-2xl text-primary">
+            {cb.text}
+          </span>
+        ))}
         {gameOver && (
           <div className="absolute inset-0 bg-background/85 backdrop-blur-sm flex flex-col items-center justify-center gap-2 rounded-xl">
             <Trophy className="h-8 w-8 text-primary" />

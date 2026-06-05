@@ -1,0 +1,44 @@
+/* Candy crush juice animations */
+@keyframes candy-pop {
+  0% { transform: scale(1) rotate(0deg); opacity: 1; }
+  40% { transform: scale(1.35) rotate(-8deg); opacity: 1; filter: brightness(1.4); }
+  100% { transform: scale(0) rotate(20deg); opacity: 0; filter: brightness(2); }
+}
+@keyframes candy-drop {
+  0% { transform: translateY(-20px); opacity: 0; }
+  60% { transform: translateY(4px); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes candy-wiggle {
+  0%, 100% { transform: scale(1) rotate(0); }
+  25% { transform: scale(1.08) rotate(-4deg); }
+  75% { transform: scale(1.08) rotate(4deg); }
+}
+@keyframes spark-burst {
+  0% { transform: translate(0,0) scale(0.6); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+@keyframes combo-float {
+  0% { transform: translate(-50%, -10%) scale(0.6); opacity: 0; }
+  20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  100% { transform: translate(-50%, -160%) scale(1); opacity: 0; }
+}
+.candy-cell { will-change: transform; }
+.candy-pop { animation: candy-pop 0.36s ease-in forwards; }
+.candy-drop { animation: candy-drop 0.28s cubic-bezier(.34,1.56,.64,1) both; }
+.candy-selected { animation: candy-wiggle 0.5s ease-in-out infinite; }
+.spark {
+  position: absolute;
+  width: 8px; height: 8px; border-radius: 9999px;
+  background: radial-gradient(circle, var(--primary-glow, #fff), transparent 70%);
+  pointer-events: none;
+  animation: spark-burst 0.5s ease-out forwards;
+}
+.combo-pop {
+  position: absolute;
+  left: 50%; top: 50%;
+  font-weight: 800;
+  pointer-events: none;
+  animation: combo-float 0.9s ease-out forwards;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
