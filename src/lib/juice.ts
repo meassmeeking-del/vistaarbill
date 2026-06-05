@@ -1,21 +1,55 @@
 // Tiny haptics + WebAudio "juice" helpers for games. Zero deps.
 
+const VOL_KEY = "pos:fx:volume";
+const HAP_KEY = "pos:fx:haptic";
+
+function readNum(key: string, fallback: number) {
+  if (typeof window === "undefined") return fallback;
+  const raw = window.localStorage.getItem(key);
+  if (raw == null) return fallback;
+  const v = Number(raw);
+  return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : fallback;
+}
+
+let _volume = readNum(VOL_KEY, 1);
+let _haptic = readNum(HAP_KEY, 1);
+let _ctx: AudioContext | null = null;
+
+export function getVolume() {
+  return _volume;
+}
+export function setVolume(v: number) {
+  _volume = Math.max(0, Math.min(1, v));
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(VOL_KEY, String(_volume));
+  }
+}
+export function getHapticIntensity() {
+  return _haptic;
+}
+export function setHapticIntensity(v: number) {
+  _haptic = Math.max(0, Math.min(1, v));
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(HAP_KEY, String(_haptic));
+  }
+}
+
 export function haptic(pattern: number | number[] = 15) {
-  if (typeof navigator === "undefined") return;
+  if (typeof navigator === "undefined" || _haptic <= 0) return;
+  const scaled = Array.isArray(pattern)
+    ? pattern.map((n) => Math.max(0, Math.round(n * _haptic)))
+    : Math.max(0, Math.round(pattern * _haptic));
   try {
     (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean })
-      .vibrate?.(pattern);
+      .vibrate?.(scaled);
   } catch {
     /* ignore */
   }
 }
 
-let _ctx: AudioContext | null = null;
-let _muted = false;
-
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
-  if (_muted) return null;
+  if (_volume <= 0) return null;
   if (_ctx) return _ctx;
   try {
     const Ctx =
@@ -29,10 +63,10 @@ function getCtx(): AudioContext | null {
 }
 
 export function setMuted(m: boolean) {
-  _muted = m;
+  setVolume(m ? 0 : 1);
 }
 export function isMuted() {
-  return _muted;
+  return _volume <= 0;
 }
 
 type ToneOpts = {
@@ -63,7 +97,7 @@ export function tone({
     osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFreq), t + dur);
   }
   gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.exponentialRampToValueAtTime(volume, t + 0.01);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume * _volume), t + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   osc.connect(gain).connect(ctx.destination);
   osc.start(t);
