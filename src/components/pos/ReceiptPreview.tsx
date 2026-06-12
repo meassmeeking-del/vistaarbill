@@ -27,6 +27,7 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [phone, setPhone] = useState("");
+  const [feedback, setFeedback] = useState(true);
 
   if (!sale) return null;
 
@@ -34,157 +35,33 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
     window.print();
   };
 
-  const buildPdf = async () => {
-      const { default: jsPDF } = await import("jspdf");
-      const widthMm = 80;
-      const margin = 4;
-      const innerWidth = widthMm - margin * 2;
-      // estimate height
-      const lineH = 4;
-      const itemLines = sale.items.length;
-      const estHeight =
-        32 + // header (logo + name)
-        (shop.addressLine1 ? lineH : 0) +
-        (shop.addressLine2 ? lineH : 0) +
-        (shop.phoneNumber ? lineH : 0) +
-        10 + // date row + dividers
-        6 + // table header
-        itemLines * lineH * 2 +
-        28 + // totals + thank you box
-        (shop.upiId ? lineH : 0) +
-        10; // footer
-      const pdf = new jsPDF({
-        unit: "mm",
-        format: [widthMm, Math.max(estHeight, 60)],
-        orientation: "portrait",
-      });
-
-      const center = widthMm / 2;
-
-      // Green header band with checkmark
-      pdf.setFillColor(16, 145, 80);
-      pdf.rect(0, 0, widthMm, 18, "F");
-      pdf.setFillColor(255, 255, 255);
-      pdf.circle(center, 9, 4.2, "F");
-      pdf.setDrawColor(16, 145, 80);
-      pdf.setLineWidth(0.6);
-      pdf.line(center - 1.8, 9, center - 0.4, 10.6);
-      pdf.line(center - 0.4, 10.6, center + 2, 7.6);
-      pdf.setLineWidth(0.2);
-
-      let y = 22;
-
-      pdf.setFont("helvetica", "bold");
-      pdf.setTextColor(20, 20, 20);
-      pdf.setFontSize(13);
-      pdf.text(shop.name || "My Shop", center, y, { align: "center" });
-      y += lineH + 1;
-
-      pdf.setFont("helvetica", "normal");
-      pdf.setTextColor(80, 80, 80);
-      pdf.setFontSize(8);
-      if (shop.addressLine1) {
-        pdf.text(shop.addressLine1, center, y, { align: "center" });
-        y += lineH;
-      }
-      if (shop.addressLine2) {
-        pdf.text(shop.addressLine2, center, y, { align: "center" });
-        y += lineH;
-      }
-      if (shop.phoneNumber) {
-        pdf.text(`Ph: ${shop.phoneNumber}`, center, y, { align: "center" });
-        y += lineH;
-      }
-
-      y += 1;
-      pdf.setLineDashPattern([0.8, 0.8], 0);
-      pdf.setDrawColor(160, 160, 160);
-      pdf.line(margin, y, widthMm - margin, y);
-      pdf.setLineDashPattern([], 0);
-      y += 3;
-
-      pdf.setTextColor(20, 20, 20);
-      pdf.setFontSize(7);
-      pdf.text(new Date(sale.date).toLocaleString(), margin, y);
-      pdf.text(`#${sale.id.slice(0, 6)}`, widthMm - margin, y, { align: "right" });
-      y += 3;
-      pdf.setLineDashPattern([0.8, 0.8], 0);
-      pdf.setDrawColor(160, 160, 160);
-      pdf.line(margin, y, widthMm - margin, y);
-      pdf.setLineDashPattern([], 0);
-      y += 3;
-
-      pdf.setFontSize(8);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Item", margin, y);
-      pdf.text("Qty", widthMm - margin - 18, y, { align: "right" });
-      pdf.text("Total", widthMm - margin, y, { align: "right" });
-      y += lineH;
-      pdf.setFont("helvetica", "normal");
-
-      for (const c of sale.items) {
-        const nameLines = pdf.splitTextToSize(c.product.name, innerWidth - 24);
-        pdf.text(nameLines, margin, y);
-        pdf.text(String(c.quantity), widthMm - margin - 18, y, { align: "right" });
-        pdf.text(
-          `Rs.${(c.product.price * c.quantity).toFixed(2)}`,
-          widthMm - margin,
-          y,
-          { align: "right" },
-        );
-        y += lineH * Math.max(nameLines.length, 1);
-      }
-
-      y += 1;
-      pdf.setLineDashPattern([0.8, 0.8], 0);
-      pdf.setDrawColor(160, 160, 160);
-      pdf.line(margin, y, widthMm - margin, y);
-      pdf.setLineDashPattern([], 0);
-      y += 4;
-
-      pdf.text("Subtotal", margin, y);
-      pdf.text(`Rs.${sale.subtotal.toFixed(2)}`, widthMm - margin, y, { align: "right" });
-      y += lineH;
-      pdf.text("Tax", margin, y);
-      pdf.text(`Rs.${sale.tax.toFixed(2)}`, widthMm - margin, y, { align: "right" });
-      y += lineH + 1;
-
-      // Total highlight box
-      pdf.setFillColor(16, 145, 80);
-      pdf.roundedRect(margin, y, widthMm - margin * 2, 8, 1.5, 1.5, "F");
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(10);
-      pdf.text("TOTAL", margin + 2, y + 5.5);
-      pdf.text(`Rs.${sale.total.toFixed(2)}`, widthMm - margin - 2, y + 5.5, { align: "right" });
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(8);
-      pdf.setTextColor(20, 20, 20);
-      y += 12;
-
-      if (shop.upiId) {
-        pdf.setFontSize(7);
-        pdf.setTextColor(80, 80, 80);
-        pdf.text(`UPI: ${shop.upiId}`, center, y, { align: "center" });
-        y += lineH;
-      }
-      pdf.setFontSize(8);
-      pdf.setTextColor(16, 145, 80);
-      pdf.setFont("helvetica", "bold");
-      pdf.text(shop.footerText || "Thank you!", center, y, { align: "center" });
-
-      return pdf;
+  const buildImageBlob = async (): Promise<Blob> => {
+    const node = previewRef.current;
+    if (!node) throw new Error("Receipt not ready");
+    const { toBlob } = await import("html-to-image");
+    const blob = await toBlob(node, {
+      pixelRatio: 2.5,
+      backgroundColor: "#ffffff",
+      cacheBust: true,
+    });
+    if (!blob) throw new Error("Image generation failed");
+    return blob;
   };
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadImage = async () => {
     setDownloading(true);
     try {
-      const pdf = await buildPdf();
-      pdf.save(`receipt-${sale.id.slice(0, 6)}.pdf`);
-      toast.success("PDF downloaded");
+      const blob = await buildImageBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `receipt-${sale.id.slice(0, 6)}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      toast.success("Image downloaded");
     } catch (e) {
       console.error(e);
-      toast.error(e instanceof Error ? e.message : "PDF failed");
+      toast.error(e instanceof Error ? e.message : "Image failed");
     } finally {
       setDownloading(false);
     }
@@ -200,16 +77,19 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
   const handleWhatsAppShare = async () => {
     setSharing(true);
     try {
-      const pdf = await buildPdf();
-      const blob = pdf.output("blob");
-      const filename = `receipt-${sale.id.slice(0, 6)}.pdf`;
-      const file = new File([blob], filename, { type: "application/pdf" });
+      const blob = await buildImageBlob();
+      const filename = `receipt-${sale.id.slice(0, 6)}.png`;
+      const file = new File([blob], filename, { type: "image/png" });
 
+      const feedbackLine = feedback
+        ? `\n\nAapka feedback humein zaroor batayein 🙏 — reply karke rating dein (1-5).`
+        : "";
       const msg =
-        `*${shop.name || "My Shop"}*\n` +
+        `🧾 *${shop.name || "My Shop"}* — Your Bill\n` +
         `Bill #${sale.id.slice(0, 6)}\n` +
         `Total: ₹${sale.total.toFixed(2)}\n\n` +
-        `${shop.footerText || "Thank you for shopping with us!"}`;
+        `${shop.footerText || "Thank you for shopping with us!"}` +
+        feedbackLine;
 
       const nav = navigator as Navigator & {
         canShare?: (data: { files?: File[] }) => boolean;
@@ -228,7 +108,7 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
         }
       }
 
-      // Fallback: download PDF + open WhatsApp chat with text
+      // Fallback: download image + open WhatsApp chat with text
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -241,7 +121,7 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
         ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
         : `https://wa.me/?text=${encodeURIComponent(msg)}`;
       window.open(waUrl, "_blank");
-      toast.success("PDF downloaded — attach it in WhatsApp chat");
+      toast.success("Image downloaded — attach it in WhatsApp chat");
     } catch (e) {
       console.error(e);
       toast.error(e instanceof Error ? e.message : "Share failed");
@@ -385,21 +265,30 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
             ) : (
               <Share2 className="h-4 w-4 mr-2" />
             )}
-            Send on WhatsApp
+            Send Photo on WhatsApp
           </Button>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={feedback}
+              onChange={(e) => setFeedback(e.target.checked)}
+              className="h-4 w-4 accent-emerald-600"
+            />
+            Message me feedback request bhi bhejein
+          </label>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2 flex-row">
           <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button variant="outline" className="flex-1" onClick={handleDownloadPdf} disabled={downloading}>
+          <Button variant="outline" className="flex-1" onClick={handleDownloadImage} disabled={downloading}>
             {downloading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Download className="h-4 w-4 mr-2" />
             )}
-            PDF
+            Photo
           </Button>
           <Button className="flex-1" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" /> Print
