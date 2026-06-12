@@ -27,6 +27,7 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [phone, setPhone] = useState("");
+  const [feedback, setFeedback] = useState(true);
 
   if (!sale) return null;
 
@@ -190,6 +191,38 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
     }
   };
 
+  const buildImageBlob = async (): Promise<Blob> => {
+    const node = previewRef.current;
+    if (!node) throw new Error("Receipt not ready");
+    const { toBlob } = await import("html-to-image");
+    const blob = await toBlob(node, {
+      pixelRatio: 2.5,
+      backgroundColor: "#ffffff",
+      cacheBust: true,
+    });
+    if (!blob) throw new Error("Image generation failed");
+    return blob;
+  };
+
+  const handleDownloadImage = async () => {
+    setDownloading(true);
+    try {
+      const blob = await buildImageBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `receipt-${sale.id.slice(0, 6)}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      toast.success("Image downloaded");
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Image failed");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const normalizePhone = (raw: string) => {
     const digits = raw.replace(/\D/g, "");
     if (!digits) return "";
@@ -200,16 +233,19 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
   const handleWhatsAppShare = async () => {
     setSharing(true);
     try {
-      const pdf = await buildPdf();
-      const blob = pdf.output("blob");
-      const filename = `receipt-${sale.id.slice(0, 6)}.pdf`;
-      const file = new File([blob], filename, { type: "application/pdf" });
+      const blob = await buildImageBlob();
+      const filename = `receipt-${sale.id.slice(0, 6)}.png`;
+      const file = new File([blob], filename, { type: "image/png" });
 
+      const feedbackLine = feedback
+        ? `\n\nAapka feedback humein zaroor batayein 🙏 — reply karke rating dein (1-5).`
+        : "";
       const msg =
-        `*${shop.name || "My Shop"}*\n` +
+        `🧾 *${shop.name || "My Shop"}* — Your Bill\n` +
         `Bill #${sale.id.slice(0, 6)}\n` +
         `Total: ₹${sale.total.toFixed(2)}\n\n` +
-        `${shop.footerText || "Thank you for shopping with us!"}`;
+        `${shop.footerText || "Thank you for shopping with us!"}` +
+        feedbackLine;
 
       const nav = navigator as Navigator & {
         canShare?: (data: { files?: File[] }) => boolean;
@@ -228,7 +264,7 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
         }
       }
 
-      // Fallback: download PDF + open WhatsApp chat with text
+      // Fallback: download image + open WhatsApp chat with text
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -241,7 +277,7 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
         ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
         : `https://wa.me/?text=${encodeURIComponent(msg)}`;
       window.open(waUrl, "_blank");
-      toast.success("PDF downloaded — attach it in WhatsApp chat");
+      toast.success("Image downloaded — attach it in WhatsApp chat");
     } catch (e) {
       console.error(e);
       toast.error(e instanceof Error ? e.message : "Share failed");
