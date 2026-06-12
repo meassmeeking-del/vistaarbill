@@ -421,21 +421,30 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
             ) : (
               <Share2 className="h-4 w-4 mr-2" />
             )}
-            Send on WhatsApp
+            Send Photo on WhatsApp
           </Button>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={feedback}
+              onChange={(e) => setFeedback(e.target.checked)}
+              className="h-4 w-4 accent-emerald-600"
+            />
+            Message me feedback request bhi bhejein
+          </label>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2 flex-row">
           <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          <Button variant="outline" className="flex-1" onClick={handleDownloadPdf} disabled={downloading}>
+          <Button variant="outline" className="flex-1" onClick={handleDownloadImage} disabled={downloading}>
             {downloading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Download className="h-4 w-4 mr-2" />
             )}
-            PDF
+            Photo
           </Button>
           <Button className="flex-1" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" /> Print
