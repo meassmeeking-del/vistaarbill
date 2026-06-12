@@ -177,20 +177,6 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
       return pdf;
   };
 
-  const handleDownloadPdf = async () => {
-    setDownloading(true);
-    try {
-      const pdf = await buildPdf();
-      pdf.save(`receipt-${sale.id.slice(0, 6)}.pdf`);
-      toast.success("PDF downloaded");
-    } catch (e) {
-      console.error(e);
-      toast.error(e instanceof Error ? e.message : "PDF failed");
-    } finally {
-      setDownloading(false);
-    }
-  };
-
   const buildImageBlob = async (): Promise<Blob> => {
     const node = previewRef.current;
     if (!node) throw new Error("Receipt not ready");
