@@ -6,16 +6,34 @@ import { SalesHistory } from "./SalesHistory";
 import { Games } from "./Games";
 import { AIChatBubble } from "./AIChatBubble";
 import { Toaster } from "@/components/ui/sonner";
-import { ShoppingCart, Package, History, Settings, LogOut, Gamepad2 } from "lucide-react";
+import { ShoppingCart, Package, History, Settings, LogOut, Gamepad2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useShop, useSales, useProducts } from "@/lib/pos-store";
+import { useEffect, useState } from "react";
 
 export function POSApp() {
   const { shop } = useShop();
   const { sales } = useSales();
   const { products } = useProducts();
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data } = await supabase.rpc("has_role", {
+        _user_id: u.user.id,
+        _role: "admin",
+      });
+      if (!cancelled) setIsAdmin(!!data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const today = new Date().toDateString();
   const todaySales = sales.filter((s) => new Date(s.date).toDateString() === today);
   const todayTotal = todaySales.reduce((s, x) => s + x.total, 0);
@@ -52,6 +70,19 @@ export function POSApp() {
               <LogOut className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Sign out</span>
             </Button>
+            {isAdmin && (
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="text-primary-foreground hover:bg-white/20 hover:text-primary-foreground"
+              >
+                <Link to="/admin">
+                  <ShieldCheck className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Admin</span>
+                </Link>
+              </Button>
+            )}
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2">
             <div className="rounded-xl bg-white/15 backdrop-blur px-3 py-2">
