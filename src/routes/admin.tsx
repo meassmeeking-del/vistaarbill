@@ -35,7 +35,20 @@ function AdminPage() {
   const [ready, setReady] = useState(false)
   const [authorized, setAuthorized] = useState(false)
   const [search, setSearch] = useState('')
-  const [users, setUsers] = useState<Awaited<ReturnType<typeof listAllUsers>>>([])
+  type AdminUser = {
+    id: string
+    email: string
+    created_at: string
+    last_sign_in_at: string | null
+    email_confirmed_at: string | null
+    display_name: string | null
+    shop_name: string | null
+    roles: string[]
+    banned: boolean
+    banned_until: string | null
+    is_self: boolean
+  }
+  const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
 
@@ -49,7 +62,7 @@ function AdminPage() {
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await list()
+      const data = (await list()) as AdminUser[]
       setUsers(data)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Load failed')
