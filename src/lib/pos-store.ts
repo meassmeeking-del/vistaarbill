@@ -29,6 +29,8 @@ export type Sale = {
   subtotal: number;
   tax: number;
   total: number;
+  customerName?: string;
+  customerPhone?: string;
 };
 
 const PRODUCTS_KEY = "pos.products";
@@ -108,5 +110,7 @@ export function useShop() {
 export function useSales() {
   const [sales, setSales] = useStored<Sale[]>(SALES_KEY, []);
   const addSale = (s: Sale) => setSales([s, ...sales]);
-  return { sales, addSale };
+  const updateSale = (id: string, patch: Partial<Sale>) =>
+    setSales(sales.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  return { sales, addSale, updateSale };
 }
