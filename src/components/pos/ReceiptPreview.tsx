@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Receipt as ReceiptView } from "./Receipt";
 import type { Sale, Shop } from "@/lib/pos-store";
+import { useSales } from "@/lib/pos-store";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Printer, Download, Loader2, Share2, Check } from "lucide-react";
+import { Printer, Download, Loader2, Share2, Check, User, Phone } from "lucide-react";
 import { toast } from "sonner";
 
 type Props = {
@@ -26,8 +27,10 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
   const previewRef = useRef<HTMLDivElement | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(sale?.customerPhone ?? "");
+  const [name, setName] = useState(sale?.customerName ?? "");
   const [feedback, setFeedback] = useState(true);
+  const { updateSale } = useSales();
 
   if (!sale) return null;
 
@@ -81,20 +84,54 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
       const filename = `receipt-${sale.id.slice(0, 6)}.png`;
       const file = new File([blob], filename, { type: "image/png" });
 
-      const feedbackLine = feedback
-        ? `\n\nAapka feedback humein zaroor batayein 🙏 — reply karke rating dein (1-5).`
+      const cleanName = name.trim();
+      const itemsList = sale.items
+        .slice(0, 8)
+        .map(
+          (c) =>
+            `• ${c.product.name} × ${c.quantity}  —  ₹${(
+              c.product.price * c.quantity
+            ).toFixed(2)}`,
+        )
+        .join("\n");
+      const moreItems =
+        sale.items.length > 8 ? `\n…+${sale.items.length - 8} aur items` : "";
+
+      const greet = cleanName ? `Namaste *${cleanName}* 🙏` : `Namaste 🙏`;
+      const feedbackBlock = feedback
+        ? `\n━━━━━━━━━━━━━━━\n💬 *Aapka feedback?*\nReply karke 1 se 5 tak rating dein ⭐\nAapki raay humare liye anmol hai!\n`
         : "";
+
       const msg =
-        `🧾 *${shop.name || "My Shop"}* — Your Bill\n` +
-        `Bill #${sale.id.slice(0, 6)}\n` +
-        `Total: ₹${sale.total.toFixed(2)}\n\n` +
-        `${shop.footerText || "Thank you for shopping with us!"}` +
-        feedbackLine;
+        `${greet}\n\n` +
+        `🧾 *${shop.name || "My Shop"}*\n` +
+        `🆔 Bill: *#${sale.id.slice(0, 6).toUpperCase()}*\n` +
+        `📅 ${new Date(sale.date).toLocaleString("en-IN")}\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `🛒 *Aapke Items:*\n${itemsList}${moreItems}\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `💰 Subtotal: ₹${sale.subtotal.toFixed(2)}\n` +
+        `🧮 Tax: ₹${sale.tax.toFixed(2)}\n` +
+        `✅ *TOTAL: ₹${sale.total.toFixed(2)}*\n` +
+        (shop.upiId ? `\n💳 UPI: ${shop.upiId}\n` : "") +
+        `\n🙏 *${shop.footerText || "Dhanyavaad! Phir milenge."}*\n` +
+        feedbackBlock +
+        `\n_— Bhejke: ${shop.name || "My Shop"}${
+          shop.phoneNumber ? " · 📞 " + shop.phoneNumber : ""
+        }_`;
+
+      // Persist customer info on the sale
+      updateSale(sale.id, {
+        customerName: cleanName || undefined,
+        customerPhone: phone.trim() || undefined,
+      });
 
       const nav = navigator as Navigator & {
         canShare?: (data: { files?: File[] }) => boolean;
         share?: (data: ShareData & { files?: File[] }) => Promise<void>;
       };
+
+      const num = normalizePhone(phone);
 
       // Try native share with file first (works on mobile WhatsApp)
       if (nav.share && nav.canShare && nav.canShare({ files: [file] })) {
@@ -116,12 +153,15 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
 
-      const num = normalizePhone(phone);
       const waUrl = num
         ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
         : `https://wa.me/?text=${encodeURIComponent(msg)}`;
       window.open(waUrl, "_blank");
-      toast.success("Image downloaded — attach it in WhatsApp chat");
+      toast.success(
+        num
+          ? `WhatsApp khul raha hai — ${cleanName || "customer"} ko bhejein, photo attach karein`
+          : "Image downloaded — WhatsApp me attach karein",
+      );
     } catch (e) {
       console.error(e);
       toast.error(e instanceof Error ? e.message : "Share failed");
@@ -238,22 +278,35 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
         </div>
 
         <div className="space-y-2 pt-2">
-          <Label htmlFor="wa-phone" className="text-xs">
-            Customer WhatsApp number (10-digit, optional)
-          </Label>
-          <div className="flex gap-2">
-            <div className="flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
-              +91
-            </div>
+          <div className="grid gap-2">
+            <Label htmlFor="wa-name" className="text-xs flex items-center gap-1">
+              <User className="h-3 w-3" /> Customer ka naam
+            </Label>
             <Input
-              id="wa-phone"
-              type="tel"
-              inputMode="numeric"
-              placeholder="98765 43210"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="flex-1"
+              id="wa-name"
+              placeholder="e.g. Rahul Sharma"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="wa-phone" className="text-xs flex items-center gap-1">
+              <Phone className="h-3 w-3" /> WhatsApp number (10-digit)
+            </Label>
+            <div className="flex gap-2">
+              <div className="flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
+                +91
+              </div>
+              <Input
+                id="wa-phone"
+                type="tel"
+                inputMode="numeric"
+                placeholder="98765 43210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="flex-1"
+              />
+            </div>
           </div>
           <Button
             onClick={handleWhatsAppShare}
@@ -265,7 +318,9 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
             ) : (
               <Share2 className="h-4 w-4 mr-2" />
             )}
-            Send Photo on WhatsApp
+            {phone.replace(/\D/g, "").length >= 10 && name.trim()
+              ? `Send to ${name.trim()} on WhatsApp`
+              : "Send Photo on WhatsApp"}
           </Button>
           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
             <input
