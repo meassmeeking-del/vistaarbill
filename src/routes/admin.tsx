@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useServerFn } from '@tanstack/react-start'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   listAllUsers,
   setUserBan,
@@ -36,6 +35,9 @@ function AdminPage() {
   const [ready, setReady] = useState(false)
   const [authorized, setAuthorized] = useState(false)
   const [search, setSearch] = useState('')
+  const [users, setUsers] = useState<Awaited<ReturnType<typeof listAllUsers>>>([])
+  const [loading, setLoading] = useState(false)
+  const [pendingId, setPendingId] = useState<string | null>(null)
 
   const list = useServerFn(listAllUsers)
   const checkAdmin = useServerFn(checkIsAdmin)
@@ -44,7 +46,17 @@ function AdminPage() {
   const deleteFn = useServerFn(deleteUserAccount)
   const roleFn = useServerFn(setUserRole)
 
-  const qc = useQueryClient()
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await list()
+      setUsers(data)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Load failed')
+    } finally {
+      setLoading(false)
+    }
+  }, [list])
 
   useEffect(() => {
     let cancelled = false
@@ -63,6 +75,7 @@ function AdminPage() {
           return
         }
         setAuthorized(true)
+        await refresh()
       } catch {
         navigate({ to: '/' })
       } finally {
@@ -72,49 +85,20 @@ function AdminPage() {
     return () => {
       cancelled = true
     }
-  }, [checkAdmin, navigate])
+  }, [checkAdmin, navigate, refresh])
 
-  const users = useQuery({
-    queryKey: ['admin-users'],
-    queryFn: () => list(),
-    enabled: authorized,
-  })
-
-  const refresh = () => qc.invalidateQueries({ queryKey: ['admin-users'] })
-
-  const mBan = useMutation({
-    mutationFn: (v: { userId: string; ban: boolean }) => banFn({ data: v }),
-    onSuccess: (_d, v) => {
-      toast.success(v.ban ? 'User banned' : 'User unbanned')
-      refresh()
-    },
-    onError: (e: Error) => toast.error(e.message),
-  })
-  const mActive = useMutation({
-    mutationFn: (v: { userId: string; active: boolean }) => activeFn({ data: v }),
-    onSuccess: (_d, v) => {
-      toast.success(v.active ? 'User activated' : 'User deactivated')
-      refresh()
-    },
-    onError: (e: Error) => toast.error(e.message),
-  })
-  const mDelete = useMutation({
-    mutationFn: (v: { userId: string }) => deleteFn({ data: v }),
-    onSuccess: () => {
-      toast.success('User deleted')
-      refresh()
-    },
-    onError: (e: Error) => toast.error(e.message),
-  })
-  const mRole = useMutation({
-    mutationFn: (v: { userId: string; role: 'admin' | 'cashier'; grant: boolean }) =>
-      roleFn({ data: v }),
-    onSuccess: () => {
-      toast.success('Role updated')
-      refresh()
-    },
-    onError: (e: Error) => toast.error(e.message),
-  })
+  const run = async (id: string, label: string, fn: () => Promise<unknown>) => {
+    setPendingId(id)
+    try {
+      await fn()
+      toast.success(label)
+      await refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Action failed')
+    } finally {
+      setPendingId(null)
+    }
+  }
 
   if (!ready) {
     return (
@@ -125,7 +109,7 @@ function AdminPage() {
   }
   if (!authorized) return null
 
-  const filtered = (users.data ?? []).filter((u) => {
+  const filtered = users.filter((u) => {
     const q = search.trim().toLowerCase()
     if (!q) return true
     return (
@@ -152,7 +136,7 @@ function AdminPage() {
             <p className="text-xs opacity-80">Manage users — ban, activate, delete</p>
           </div>
           <Badge className="bg-white/20 text-white border-0">
-            {users.data?.length ?? 0} users
+            {users.length} users
           </Badge>
         </div>
       </header>
@@ -166,30 +150,21 @@ function AdminPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="border-0 shadow-none focus-visible:ring-0"
           />
-          <Button variant="outline" size="sm" onClick={refresh} disabled={users.isFetching}>
-            {users.isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
+          <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
           </Button>
         </div>
 
-        {users.isLoading && (
+        {loading && users.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-          </div>
-        )}
-        {users.isError && (
-          <div className="text-center py-12 text-destructive text-sm">
-            {(users.error as Error)?.message ?? 'Failed to load users'}
           </div>
         )}
 
         <div className="grid gap-3">
           {filtered.map((u) => {
             const isAdmin = u.roles.includes('admin')
-            const busy =
-              (mBan.isPending && mBan.variables?.userId === u.id) ||
-              (mActive.isPending && mActive.variables?.userId === u.id) ||
-              (mDelete.isPending && mDelete.variables?.userId === u.id) ||
-              (mRole.isPending && mRole.variables?.userId === u.id)
+            const busy = pendingId === u.id
             return (
               <div
                 key={u.id}
@@ -239,7 +214,11 @@ function AdminPage() {
                       size="sm"
                       variant="outline"
                       disabled={busy || u.is_self}
-                      onClick={() => mBan.mutate({ userId: u.id, ban: false })}
+                      onClick={() =>
+                        run(u.id, 'User unbanned', () =>
+                          banFn({ data: { userId: u.id, ban: false } }),
+                        )
+                      }
                     >
                       <CheckCircle2 className="h-4 w-4 mr-1" /> Unban
                     </Button>
@@ -249,7 +228,10 @@ function AdminPage() {
                       variant="outline"
                       disabled={busy || u.is_self}
                       onClick={() => {
-                        if (confirm(`Ban ${u.email}?`)) mBan.mutate({ userId: u.id, ban: true })
+                        if (confirm(`Ban ${u.email}?`))
+                          run(u.id, 'User banned', () =>
+                            banFn({ data: { userId: u.id, ban: true } }),
+                          )
                       }}
                     >
                       <Ban className="h-4 w-4 mr-1" /> Ban
@@ -260,7 +242,11 @@ function AdminPage() {
                     variant="outline"
                     disabled={busy || u.is_self}
                     onClick={() =>
-                      mActive.mutate({ userId: u.id, active: u.banned })
+                      run(
+                        u.id,
+                        u.banned ? 'User activated' : 'User deactivated',
+                        () => activeFn({ data: { userId: u.id, active: u.banned } }),
+                      )
                     }
                     title={u.banned ? 'Activate' : 'Deactivate'}
                   >
@@ -272,7 +258,11 @@ function AdminPage() {
                     variant={isAdmin ? 'secondary' : 'default'}
                     disabled={busy || (u.is_self && isAdmin)}
                     onClick={() =>
-                      mRole.mutate({ userId: u.id, role: 'admin', grant: !isAdmin })
+                      run(u.id, 'Role updated', () =>
+                        roleFn({
+                          data: { userId: u.id, role: 'admin', grant: !isAdmin },
+                        }),
+                      )
                     }
                   >
                     <Crown className="h-4 w-4 mr-1" />
@@ -284,7 +274,9 @@ function AdminPage() {
                     disabled={busy || u.is_self}
                     onClick={() => {
                       if (confirm(`Permanently delete ${u.email}? This cannot be undone.`))
-                        mDelete.mutate({ userId: u.id })
+                        run(u.id, 'User deleted', () =>
+                          deleteFn({ data: { userId: u.id } }),
+                        )
                     }}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -293,7 +285,7 @@ function AdminPage() {
               </div>
             )
           })}
-          {!users.isLoading && filtered.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div className="text-center text-sm text-muted-foreground py-12">
               No users found.
             </div>
