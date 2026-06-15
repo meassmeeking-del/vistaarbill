@@ -1,3 +1,36 @@
+
+/* ===== App open splash animations ===== */
+@keyframes splash-pop {
+  0% { transform: scale(0.4) rotate(-20deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(8deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes splash-cart-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes splash-rise {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes splash-pulse-ring {
+  0% { transform: scale(0.6); opacity: 0.7; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+@keyframes splash-dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+  40% { transform: scale(1.2); opacity: 1; }
+}
+@keyframes splash-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.4; }
+  50% { transform: translateY(-18px) rotate(20deg); opacity: 0.9; }
+}
+.splash-pop { animation: splash-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.splash-cart { animation: splash-cart-bounce 1.2s ease-in-out 0.7s infinite; }
+.splash-rise { animation: splash-rise 0.6s ease-out 0.3s both; }
+.splash-pulse-ring { animation: splash-pulse-ring 1.8s ease-out infinite; }
+.splash-dot { display: inline-block; animation: splash-dot 1.2s ease-in-out infinite; }
+.splash-float { animation: splash-float 3s ease-in-out infinite; }
 /* Candy crush juice animations */
 @keyframes candy-pop {
   0% { transform: scale(1) rotate(0deg); opacity: 1; }
