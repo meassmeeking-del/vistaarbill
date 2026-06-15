@@ -133,19 +133,34 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
 
       const num = normalizePhone(phone);
 
-      // Try native share with file first (works on mobile WhatsApp)
+      // Always copy message to clipboard so user can paste as caption
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(msg);
+        copied = true;
+      } catch {
+        /* ignore */
+      }
+
+      // 1) Best path on mobile: native share sheet with the photo as a file +
+      //    text pre-filled. User picks WhatsApp → contact → both go together.
       if (nav.share && nav.canShare && nav.canShare({ files: [file] })) {
         try {
-          await nav.share({ files: [file], text: msg, title: filename });
-          toast.success("Shared!");
+          await nav.share({ files: [file], text: msg, title: "Bill" });
+          toast.success(
+            cleanName ? `Bill ${cleanName} ko bhej diya 🎉` : "Bill share ho gaya 🎉",
+          );
           return;
         } catch (err) {
           if ((err as DOMException)?.name === "AbortError") return;
-          // fall through to wa.me
+          // fall through to desktop flow
         }
       }
 
-      // Fallback: download image + open WhatsApp chat with text
+      // 2) Desktop / unsupported: download photo, then open WhatsApp chat
+      //    WITHOUT text (wa.me text + image attach ek saath nahi hota — text
+      //    bhej deta toh image attach option chhup jata). User photo attach
+      //    kare aur clipboard se caption paste kare — dono saath jayenge.
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -153,14 +168,19 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
 
-      const waUrl = num
-        ? `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
-        : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      const waUrl = num ? `https://wa.me/${num}` : `https://wa.me/`;
       window.open(waUrl, "_blank");
+
       toast.success(
         num
-          ? `WhatsApp khul raha hai — ${cleanName || "customer"} ko bhejein, photo attach karein`
-          : "Image downloaded — WhatsApp me attach karein",
+          ? `Photo download ho gayi · ${cleanName || "Customer"} ka WhatsApp chat khula`
+          : "Photo download ho gayi · WhatsApp khula",
+        {
+          description: copied
+            ? "📎 Photo attach karein · caption (text) clipboard me hai, paste kar dein"
+            : "📎 Photo attach karein · message manually likhein",
+          duration: 9000,
+        },
       );
     } catch (e) {
       console.error(e);
