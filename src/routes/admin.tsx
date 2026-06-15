@@ -25,6 +25,8 @@ import {
   Power,
   Loader2,
 } from 'lucide-react'
+import { AdminSubscriptions } from '@/components/pos/AdminSubscriptions'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export const Route = createFileRoute('/admin')({
   component: AdminPage,
@@ -155,6 +157,12 @@ function AdminPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+        <Tabs defaultValue="users">
+          <TabsList className="grid grid-cols-2 max-w-sm">
+            <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="subs">Subscriptions</TabsTrigger>
+          </TabsList>
+          <TabsContent value="users" className="space-y-4 mt-4">
         <div className="flex items-center gap-2 bg-card border rounded-xl p-2 shadow-sm">
           <Search className="h-4 w-4 ml-2 text-muted-foreground" />
           <Input
@@ -304,6 +312,11 @@ function AdminPage() {
             </div>
           )}
         </div>
+          </TabsContent>
+          <TabsContent value="subs" className="mt-4">
+            <AdminSubscriptions />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   )
