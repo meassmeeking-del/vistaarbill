@@ -214,16 +214,17 @@ export const updateAppSettings = createServerFn({ method: 'POST' })
     const { supabase, userId } = context
     if (!(await isAdmin(supabase, userId))) throw new Error('Forbidden')
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server')
-    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (data.upi_id !== undefined) patch.upi_id = data.upi_id
-    if (data.qr_image_url !== undefined) patch.qr_image_url = data.qr_image_url
-    if (data.trial_price !== undefined) patch.trial_price = data.trial_price
-    if (data.monthly_price !== undefined) patch.monthly_price = data.monthly_price
-    if (data.trial_days !== undefined) patch.trial_days = data.trial_days
-    if (data.monthly_days !== undefined) patch.monthly_days = data.monthly_days
     const { error } = await supabaseAdmin
       .from('app_settings')
-      .update(patch)
+      .update({
+        updated_at: new Date().toISOString(),
+        ...(data.upi_id !== undefined ? { upi_id: data.upi_id } : {}),
+        ...(data.qr_image_url !== undefined ? { qr_image_url: data.qr_image_url } : {}),
+        ...(data.trial_price !== undefined ? { trial_price: data.trial_price } : {}),
+        ...(data.monthly_price !== undefined ? { monthly_price: data.monthly_price } : {}),
+        ...(data.trial_days !== undefined ? { trial_days: data.trial_days } : {}),
+        ...(data.monthly_days !== undefined ? { monthly_days: data.monthly_days } : {}),
+      })
       .eq('id', true)
     if (error) throw new Error(error.message)
     return { ok: true }
