@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { POSApp } from "@/components/pos/POSApp";
 import { AuthGate } from "@/components/AuthGate";
+import { SplashScreen } from "@/components/SplashScreen";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -8,8 +9,10 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <AuthGate>
-      <POSApp />
-    </AuthGate>
+    <SplashScreen>
+      <AuthGate>
+        <POSApp />
+      </AuthGate>
+    </SplashScreen>
   );
 }
