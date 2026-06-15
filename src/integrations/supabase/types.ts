@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          id: boolean
+          monthly_days: number
+          monthly_price: number
+          qr_image_url: string | null
+          trial_days: number
+          trial_price: number
+          updated_at: string
+          upi_id: string | null
+        }
+        Insert: {
+          id?: boolean
+          monthly_days?: number
+          monthly_price?: number
+          qr_image_url?: string | null
+          trial_days?: number
+          trial_price?: number
+          updated_at?: string
+          upi_id?: string | null
+        }
+        Update: {
+          id?: boolean
+          monthly_days?: number
+          monthly_price?: number
+          qr_image_url?: string | null
+          trial_days?: number
+          trial_price?: number
+          updated_at?: string
+          upi_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -35,6 +68,51 @@ export type Database = {
           id?: string
           shop_name?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      subscription_requests: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          note: string | null
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          reject_reason: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+          utr: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          plan: Database["public"]["Enums"]["subscription_plan"]
+          reject_reason?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id: string
+          utr: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          plan?: Database["public"]["Enums"]["subscription_plan"]
+          reject_reason?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id?: string
+          utr?: string
         }
         Relationships: []
       }
@@ -64,6 +142,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -74,6 +153,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "cashier"
+      subscription_plan: "trial" | "monthly"
+      subscription_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -202,6 +283,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "cashier"],
+      subscription_plan: ["trial", "monthly"],
+      subscription_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
