@@ -25,6 +25,8 @@ import { supabase } from '@/integrations/supabase/client'
 
 type Sub = Awaited<ReturnType<typeof getMySubscription>>
 
+const PENDING_GRACE_MS = 24 * 60 * 60 * 1000 // 24 hours
+
 export function SubscriptionGate({ children }: { children: ReactNode }) {
   const fetchSub = useServerFn(getMySubscription)
   const submitFn = useServerFn(submitSubscriptionRequest)
@@ -48,6 +50,27 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  // Auto sign-out if pending request crosses 24h grace without approval
+  useEffect(() => {
+    const latest = sub?.latest as any
+    if (!latest || latest.status !== 'pending') return
+    const created = new Date(latest.created_at).getTime()
+    const elapsed = Date.now() - created
+    const remaining = PENDING_GRACE_MS - elapsed
+    if (remaining <= 0) {
+      toast.error('24 ghante me approval nahi mili — logout ho rahe hain')
+      supabase.auth.signOut().finally(() => {
+        window.location.reload()
+      })
+      return
+    }
+    const t = setTimeout(() => {
+      toast.error('24 ghante me approval nahi mili — logout ho rahe hain')
+      supabase.auth.signOut().finally(() => window.location.reload())
+    }, remaining)
+    return () => clearTimeout(t)
+  }, [sub])
 
   // Realtime: when admin approves/rejects, refresh instantly
   useEffect(() => {
@@ -104,6 +127,20 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
     return (
       <>
         <ActiveStatusBar sub={sub} />
+        {children}
+      </>
+    )
+  }
+
+  // Pending within 24h grace → unlock app with a pending status bar
+  const latestAny = sub?.latest as any
+  if (
+    latestAny?.status === 'pending' &&
+    Date.now() - new Date(latestAny.created_at).getTime() < PENDING_GRACE_MS
+  ) {
+    return (
+      <>
+        <PendingStatusBar createdAt={latestAny.created_at} plan={latestAny.plan} />
         {children}
       </>
     )
