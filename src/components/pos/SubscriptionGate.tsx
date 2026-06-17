@@ -134,17 +134,7 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
 
   // Pending within 24h grace → unlock app with a pending status bar
   const latestAny = sub?.latest as any
-  if (
-    latestAny?.status === 'pending' &&
-    Date.now() - new Date(latestAny.created_at).getTime() < PENDING_GRACE_MS
-  ) {
-    return (
-      <>
-        <PendingStatusBar createdAt={latestAny.created_at} plan={latestAny.plan} />
-        {children}
-      </>
-    )
-  }
+  void latestAny
 
   const settings = sub?.settings
   const latest = sub?.latest
@@ -416,7 +406,20 @@ function PendingCard({
   latest: { plan: string; amount: number; utr: string; created_at: string }
   onRefresh: () => void
 }) {
-  // animated verification spinner
+  // Live countdown until 24h auto-logout
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const remainingMs = Math.max(
+    0,
+    PENDING_GRACE_MS - (now - new Date(latest.created_at).getTime()),
+  )
+  const hours = Math.floor(remainingMs / 3_600_000)
+  const mins = Math.floor((remainingMs % 3_600_000) / 60_000)
+  const secs = Math.floor((remainingMs % 60_000) / 1000)
+  const pct = Math.max(0, Math.min(100, (remainingMs / PENDING_GRACE_MS) * 100))
   return (
     <div className="rounded-2xl bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-200 p-5 text-center space-y-3">
       <div className="mx-auto relative h-20 w-20">
@@ -432,6 +435,24 @@ function PendingCard({
         </div>
         <div className="text-sm text-amber-700">
           Admin aapki payment verify kar rahe hain
+        </div>
+      </div>
+      <div className="bg-white/80 rounded-xl p-3 space-y-2">
+        <div className="text-[10px] uppercase tracking-wider text-amber-700 font-bold">
+          Auto-logout in
+        </div>
+        <div className="font-mono font-extrabold text-2xl text-amber-900 tabular-nums">
+          {String(hours).padStart(2, '0')}:{String(mins).padStart(2, '0')}:
+          {String(secs).padStart(2, '0')}
+        </div>
+        <div className="h-1.5 w-full bg-amber-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="text-[10px] text-amber-700">
+          Agar 24 ghante me approval nahi mili to automatic logout ho jayega
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2 text-left bg-white/70 rounded-xl p-3 text-xs">
