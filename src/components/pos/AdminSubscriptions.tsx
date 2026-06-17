@@ -337,3 +337,60 @@ export function AdminSubscriptions() {
     </div>
   )
 }
+
+function QrSlot({
+  label,
+  url,
+  uploading,
+  onPick,
+  accent,
+}: {
+  label: string
+  url: string
+  uploading: boolean
+  onPick: (f: File) => void
+  accent: string
+}) {
+  return (
+    <div className="rounded-xl border p-3 space-y-2 bg-gradient-to-br from-white to-violet-50/30">
+      <div className={`text-xs font-bold bg-gradient-to-r ${accent} bg-clip-text text-transparent`}>
+        {label}
+      </div>
+      {url ? (
+        <img
+          src={url}
+          alt={label}
+          className="h-40 w-40 object-contain rounded-lg border bg-white mx-auto"
+        />
+      ) : (
+        <div className="h-40 w-40 rounded-lg border-2 border-dashed flex items-center justify-center text-[11px] text-muted-foreground p-3 text-center mx-auto">
+          No QR uploaded
+        </div>
+      )}
+      <label className="block">
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) onPick(f)
+            e.target.value = ''
+          }}
+        />
+        <span
+          className={`flex items-center justify-center gap-2 h-9 rounded-md bg-gradient-to-r ${accent} text-white text-sm font-semibold cursor-pointer hover:opacity-90 ${
+            uploading ? 'opacity-60 pointer-events-none' : ''
+          }`}
+        >
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="h-4 w-4" />
+          )}
+          Upload
+        </span>
+      </label>
+    </div>
+  )
+}
