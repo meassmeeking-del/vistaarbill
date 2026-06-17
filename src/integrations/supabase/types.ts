@@ -20,8 +20,10 @@ export type Database = {
           monthly_days: number
           monthly_price: number
           qr_image_url: string | null
+          subscription_qr_image_url: string | null
           trial_days: number
           trial_price: number
+          trial_qr_image_url: string | null
           updated_at: string
           upi_id: string | null
         }
@@ -30,8 +32,10 @@ export type Database = {
           monthly_days?: number
           monthly_price?: number
           qr_image_url?: string | null
+          subscription_qr_image_url?: string | null
           trial_days?: number
           trial_price?: number
+          trial_qr_image_url?: string | null
           updated_at?: string
           upi_id?: string | null
         }
@@ -40,8 +44,10 @@ export type Database = {
           monthly_days?: number
           monthly_price?: number
           qr_image_url?: string | null
+          subscription_qr_image_url?: string | null
           trial_days?: number
           trial_price?: number
+          trial_qr_image_url?: string | null
           updated_at?: string
           upi_id?: string | null
         }
