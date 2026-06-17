@@ -25,6 +25,8 @@ import { supabase } from '@/integrations/supabase/client'
 
 type Sub = Awaited<ReturnType<typeof getMySubscription>>
 
+const PENDING_GRACE_MS = 24 * 60 * 60 * 1000 // 24 hours
+
 export function SubscriptionGate({ children }: { children: ReactNode }) {
   const fetchSub = useServerFn(getMySubscription)
   const submitFn = useServerFn(submitSubscriptionRequest)
@@ -48,6 +50,27 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  // Auto sign-out if pending request crosses 24h grace without approval
+  useEffect(() => {
+    const latest = sub?.latest as any
+    if (!latest || latest.status !== 'pending') return
+    const created = new Date(latest.created_at).getTime()
+    const elapsed = Date.now() - created
+    const remaining = PENDING_GRACE_MS - elapsed
+    if (remaining <= 0) {
+      toast.error('24 ghante me approval nahi mili — logout ho rahe hain')
+      supabase.auth.signOut().finally(() => {
+        window.location.reload()
+      })
+      return
+    }
+    const t = setTimeout(() => {
+      toast.error('24 ghante me approval nahi mili — logout ho rahe hain')
+      supabase.auth.signOut().finally(() => window.location.reload())
+    }, remaining)
+    return () => clearTimeout(t)
+  }, [sub])
 
   // Realtime: when admin approves/rejects, refresh instantly
   useEffect(() => {
@@ -104,6 +127,20 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
     return (
       <>
         <ActiveStatusBar sub={sub} />
+        {children}
+      </>
+    )
+  }
+
+  // Pending within 24h grace → unlock app with a pending status bar
+  const latestAny = sub?.latest as any
+  if (
+    latestAny?.status === 'pending' &&
+    Date.now() - new Date(latestAny.created_at).getTime() < PENDING_GRACE_MS
+  ) {
+    return (
+      <>
+        <PendingStatusBar createdAt={latestAny.created_at} plan={latestAny.plan} />
         {children}
       </>
     )
@@ -453,6 +490,30 @@ function ActiveStatusBar({ sub }: { sub: Sub }) {
       <CalendarClock className="h-3.5 w-3.5" />
       <span>
         {daysLeft} {daysLeft === 1 ? 'day' : 'days'} left
+      </span>
+    </div>
+  )
+}
+
+function PendingStatusBar({ createdAt, plan }: { createdAt: string; plan: string }) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+  const remainingMs = Math.max(
+    0,
+    PENDING_GRACE_MS - (now - new Date(createdAt).getTime()),
+  )
+  const hours = Math.floor(remainingMs / 3_600_000)
+  const mins = Math.floor((remainingMs % 3_600_000) / 60_000)
+  return (
+    <div className="bg-amber-500/95 text-white text-xs font-semibold py-1.5 px-3 flex items-center justify-center gap-2">
+      <Clock className="h-3.5 w-3.5 animate-pulse" />
+      <span className="capitalize">{plan} · approval pending</span>
+      <span className="opacity-80">·</span>
+      <span>
+        {hours}h {mins}m left
       </span>
     </div>
   )
