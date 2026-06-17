@@ -189,7 +189,13 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
           <PaymentBlock
             amount={plan === 'trial' ? trialPrice : monthlyPrice}
             upiId={settings?.upi_id ?? ''}
-            qr={settings?.qr_image_url ?? ''}
+            qr={
+              (plan === 'trial'
+                ? (settings as any)?.trial_qr_image_url
+                : (settings as any)?.subscription_qr_image_url) ??
+              settings?.qr_image_url ??
+              ''
+            }
           />
 
           <div className="space-y-2">
