@@ -46,7 +46,8 @@ export function AdminSubscriptions() {
   const [busy, setBusy] = useState<string | null>(null)
 
   const [upiId, setUpiId] = useState('')
-  const [qrUrl, setQrUrl] = useState('')
+  const [trialQrUrl, setTrialQrUrl] = useState('')
+  const [subQrUrl, setSubQrUrl] = useState('')
   const [trialPrice, setTrialPrice] = useState(1)
   const [monthlyPrice, setMonthlyPrice] = useState(99)
   const [trialDays, setTrialDays] = useState(7)
@@ -72,7 +73,8 @@ export function AdminSubscriptions() {
       const st = s?.settings
       if (st) {
         setUpiId(st.upi_id ?? '')
-        setQrUrl(st.qr_image_url ?? '')
+        setTrialQrUrl((st as any).trial_qr_image_url ?? st.qr_image_url ?? '')
+        setSubQrUrl((st as any).subscription_qr_image_url ?? st.qr_image_url ?? '')
         setTrialPrice(Number(st.trial_price ?? 1))
         setMonthlyPrice(Number(st.monthly_price ?? 99))
         setTrialDays(Number(st.trial_days ?? 7))
@@ -109,11 +111,11 @@ export function AdminSubscriptions() {
     }
   }
 
-  const uploadQr = async (file: File) => {
+  const uploadQr = async (file: File, slot: 'trial' | 'subscription') => {
     setUploading(true)
     try {
       const ext = file.name.split('.').pop() || 'png'
-      const path = `qr-${Date.now()}.${ext}`
+      const path = `qr-${slot}-${Date.now()}.${ext}`
       const { error: upErr } = await supabase.storage
         .from('qr-codes')
         .upload(path, file, { upsert: true, contentType: file.type })
@@ -122,8 +124,13 @@ export function AdminSubscriptions() {
         .from('qr-codes')
         .createSignedUrl(path, 60 * 60 * 24 * 365 * 5)
       if (signErr || !signed?.signedUrl) throw signErr || new Error('Sign failed')
-      setQrUrl(signed.signedUrl)
-      await settingsFn({ data: { qr_image_url: signed.signedUrl } })
+      if (slot === 'trial') {
+        setTrialQrUrl(signed.signedUrl)
+        await settingsFn({ data: { trial_qr_image_url: signed.signedUrl } as any })
+      } else {
+        setSubQrUrl(signed.signedUrl)
+        await settingsFn({ data: { subscription_qr_image_url: signed.signedUrl } as any })
+      }
       toast.success('QR upload ho gaya')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Upload failed')
@@ -160,44 +167,22 @@ export function AdminSubscriptions() {
           <QrCode className="h-5 w-5 text-violet-600" />
           <h2 className="font-bold">Payment QR & Pricing</h2>
         </div>
-        <div className="grid sm:grid-cols-[180px_1fr] gap-4">
-          <div className="space-y-2">
-            {qrUrl ? (
-              <img
-                src={qrUrl}
-                alt="QR"
-                className="h-44 w-44 object-contain rounded-xl border bg-white"
-              />
-            ) : (
-              <div className="h-44 w-44 rounded-xl border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground p-3 text-center">
-                No QR uploaded
-              </div>
-            )}
-            <label className="block">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (f) uploadQr(f)
-                  e.target.value = ''
-                }}
-              />
-              <span
-                className={`flex items-center justify-center gap-2 h-9 w-44 rounded-md bg-violet-600 text-white text-sm font-semibold cursor-pointer hover:bg-violet-700 ${
-                  uploading ? 'opacity-60 pointer-events-none' : ''
-                }`}
-              >
-                {uploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-                Upload QR
-              </span>
-            </label>
-          </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <QrSlot
+            label="Trial plan QR"
+            url={trialQrUrl}
+            uploading={uploading}
+            onPick={(f) => uploadQr(f, 'trial')}
+            accent="from-emerald-500 to-teal-600"
+          />
+          <QrSlot
+            label="Subscription QR"
+            url={subQrUrl}
+            uploading={uploading}
+            onPick={(f) => uploadQr(f, 'subscription')}
+            accent="from-violet-600 to-fuchsia-600"
+          />
+        </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <Label className="text-xs">UPI ID</Label>
@@ -252,7 +237,6 @@ export function AdminSubscriptions() {
               Save settings
             </Button>
           </div>
-        </div>
       </div>
 
       {/* Requests list */}
