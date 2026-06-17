@@ -494,3 +494,27 @@ function ActiveStatusBar({ sub }: { sub: Sub }) {
     </div>
   )
 }
+
+function PendingStatusBar({ createdAt, plan }: { createdAt: string; plan: string }) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(t)
+  }, [])
+  const remainingMs = Math.max(
+    0,
+    PENDING_GRACE_MS - (now - new Date(createdAt).getTime()),
+  )
+  const hours = Math.floor(remainingMs / 3_600_000)
+  const mins = Math.floor((remainingMs % 3_600_000) / 60_000)
+  return (
+    <div className="bg-amber-500/95 text-white text-xs font-semibold py-1.5 px-3 flex items-center justify-center gap-2">
+      <Clock className="h-3.5 w-3.5 animate-pulse" />
+      <span className="capitalize">{plan} · approval pending</span>
+      <span className="opacity-80">·</span>
+      <span>
+        {hours}h {mins}m left
+      </span>
+    </div>
+  )
+}
