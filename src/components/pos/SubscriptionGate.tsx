@@ -20,6 +20,9 @@ import {
   Crown,
   Zap,
   CalendarClock,
+  Smartphone,
+  ArrowRight,
+  IndianRupee,
 } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 
