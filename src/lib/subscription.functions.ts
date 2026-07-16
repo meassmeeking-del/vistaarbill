@@ -205,6 +205,8 @@ export const updateAppSettings = createServerFn({ method: 'POST' })
   .inputValidator((input: {
     upi_id?: string | null
     qr_image_url?: string | null
+    trial_qr_image_url?: string | null
+    subscription_qr_image_url?: string | null
     trial_price?: number
     monthly_price?: number
     trial_days?: number
@@ -220,6 +222,8 @@ export const updateAppSettings = createServerFn({ method: 'POST' })
         updated_at: new Date().toISOString(),
         ...(data.upi_id !== undefined ? { upi_id: data.upi_id } : {}),
         ...(data.qr_image_url !== undefined ? { qr_image_url: data.qr_image_url } : {}),
+        ...(data.trial_qr_image_url !== undefined ? { trial_qr_image_url: data.trial_qr_image_url } : {}),
+        ...(data.subscription_qr_image_url !== undefined ? { subscription_qr_image_url: data.subscription_qr_image_url } : {}),
         ...(data.trial_price !== undefined ? { trial_price: data.trial_price } : {}),
         ...(data.monthly_price !== undefined ? { monthly_price: data.monthly_price } : {}),
         ...(data.trial_days !== undefined ? { trial_days: data.trial_days } : {}),
