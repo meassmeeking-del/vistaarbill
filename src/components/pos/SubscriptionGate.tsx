@@ -38,6 +38,7 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
   const [plan, setPlan] = useState<'trial' | 'monthly'>('trial')
   const [utr, setUtr] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [payStep, setPayStep] = useState<'idle' | 'opened' | 'confirm'>('idle')
 
   const refresh = useCallback(async () => {
     try {
@@ -100,16 +101,18 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
     }
   }, [refresh])
 
-  const handleSubmit = async () => {
-    if (!utr.trim()) {
+  const handleSubmit = async (overrideUtr?: string) => {
+    const finalUtr = (overrideUtr ?? utr).trim()
+    if (!finalUtr) {
       toast.error('UPI Reference / UTR number daalein')
       return
     }
     setSubmitting(true)
     try {
-      await submitFn({ data: { plan, utr: utr.trim() } })
+      await submitFn({ data: { plan, utr: finalUtr } })
       toast.success('Request submit ho gayi 🎉 Admin approval ka wait karein')
       setUtr('')
+      setPayStep('idle')
       await refresh()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Submit failed')
@@ -226,38 +229,55 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
               settings?.qr_image_url ??
               ''
             }
+            payStep={payStep}
+            setPayStep={setPayStep}
           />
 
-          <div className="space-y-2">
-            <Label htmlFor="utr" className="text-sm font-semibold">
-              UPI Reference / UTR number
-            </Label>
-            <Input
-              id="utr"
-              placeholder="e.g. 412345678912"
-              value={utr}
-              onChange={(e) => setUtr(e.target.value)}
-              inputMode="numeric"
-              className="h-12 text-base"
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Payment karne ke baad WhatsApp/UPI app me jo reference number aata hai woh
-              daalein.
-            </p>
-          </div>
-
-          <Button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full h-12 text-base font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:opacity-95"
-          >
-            {submitting ? (
-              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-            ) : (
-              <ShieldCheck className="h-5 w-5 mr-2" />
-            )}
-            Submit for admin approval
-          </Button>
+          {payStep === 'confirm' && (
+            <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-3 flex items-start gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-emerald-800">
+                  <div className="font-bold">Payment kar diya?</div>
+                  UPI app me jo <b>12-digit UTR / reference number</b> mila hai woh
+                  neeche daalein — request auto-submit ho jayegi.
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="utr" className="text-sm font-semibold">
+                  UTR / Reference number
+                </Label>
+                <Input
+                  id="utr"
+                  autoFocus
+                  placeholder="e.g. 412345678912"
+                  value={utr}
+                  onChange={(e) => setUtr(e.target.value)}
+                  inputMode="numeric"
+                  className="h-12 text-base font-mono tracking-wider"
+                />
+              </div>
+              <Button
+                onClick={() => handleSubmit()}
+                disabled={submitting || utr.trim().length < 4}
+                className="w-full h-12 text-base font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-95 shadow-lg shadow-emerald-500/30"
+              >
+                {submitting ? (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                ) : (
+                  <ShieldCheck className="h-5 w-5 mr-2" />
+                )}
+                Confirm & Submit
+              </Button>
+              <button
+                type="button"
+                onClick={() => setPayStep('idle')}
+                className="w-full text-xs text-muted-foreground hover:text-foreground"
+              >
+                ← Payment nahi hui? Wapas jaayein
+              </button>
+            </div>
+          )}
         </>
       )}
     </LockShell>
