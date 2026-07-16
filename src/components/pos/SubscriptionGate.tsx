@@ -365,10 +365,14 @@ function PaymentBlock({
   amount,
   upiId,
   qr,
+  payStep,
+  setPayStep,
 }: {
   amount: number
   upiId: string
   qr: string
+  payStep: 'idle' | 'opened' | 'confirm'
+  setPayStep: (s: 'idle' | 'opened' | 'confirm') => void
 }) {
   const copyUpi = async () => {
     if (!upiId) return
@@ -384,6 +388,26 @@ function PaymentBlock({
         'VistaarBill subscription',
       )}`
     : ''
+  const openUpiApp = () => {
+    if (!upiLink) {
+      toast.error('Admin ne UPI ID set nahi ki — QR se pay karein')
+      return
+    }
+    setPayStep('opened')
+    // Trigger the UPI intent
+    window.location.href = upiLink
+    // If user comes back within a few seconds without switching, still show confirm
+    setTimeout(() => setPayStep('confirm'), 1500)
+  }
+  // When page becomes visible again after switching to UPI app → confirm step
+  useEffect(() => {
+    if (payStep !== 'opened') return
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setPayStep('confirm')
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [payStep, setPayStep])
   return (
     <div className="rounded-2xl border-2 border-dashed border-violet-300 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-4 text-center space-y-3">
       <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
@@ -410,13 +434,66 @@ function PaymentBlock({
           </Button>
         </div>
       )}
-      {upiLink && (
-        <a
-          href={upiLink}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-700 underline"
+      {/* Animated Pay Button */}
+      {payStep !== 'confirm' && (
+        <button
+          type="button"
+          onClick={openUpiApp}
+          disabled={!upiLink && !qr}
+          className="group relative w-full h-14 rounded-2xl overflow-hidden font-extrabold text-white shadow-xl shadow-violet-500/40 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-transform"
         >
-          📱 Open in UPI app
-        </a>
+          {/* animated gradient background */}
+          <span
+            className="absolute inset-0 bg-[linear-gradient(110deg,#7c3aed,45%,#ec4899,55%,#7c3aed)] bg-[length:200%_100%]"
+            style={{ animation: 'upi-shine 2.5s linear infinite' }}
+          />
+          {/* pulsing glow */}
+          <span className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors" />
+          {/* content */}
+          <span className="relative flex items-center justify-center gap-2 text-base">
+            {payStep === 'opened' ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                UPI app khul rahi hai…
+              </>
+            ) : (
+              <>
+                <Smartphone className="h-5 w-5 animate-pulse" />
+                Pay ₹{amount} via UPI
+                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </>
+            )}
+          </span>
+          {/* ping indicator */}
+          <span className="absolute top-2 right-3 flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+          </span>
+          <style>{`@keyframes upi-shine{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+        </button>
+      )}
+      {/* App suggestions row */}
+      {payStep !== 'confirm' && upiLink && (
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <span className="text-[10px] text-muted-foreground">Opens in</span>
+          {['GPay', 'PhonePe', 'Paytm', 'BHIM'].map((n) => (
+            <span
+              key={n}
+              className="text-[10px] font-bold text-violet-700 bg-white/70 border border-violet-200 rounded-full px-2 py-0.5"
+            >
+              {n}
+            </span>
+          ))}
+        </div>
+      )}
+      {payStep === 'idle' && (
+        <button
+          type="button"
+          onClick={() => setPayStep('confirm')}
+          className="text-[11px] font-semibold text-violet-700 underline underline-offset-2"
+        >
+          Already paid? UTR daalein →
+        </button>
       )}
     </div>
   )
