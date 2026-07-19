@@ -21,6 +21,7 @@ const signUpSchema = signInSchema.extend({
 export function AuthForm() {
   const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
+  const [banned, setBanned] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -37,8 +38,22 @@ export function AuthForm() {
     const { error } = await supabase.auth.signInWithPassword(parsed.data);
     setLoading(false);
     if (error) {
-      toast.error(error.message);
+      const msg = (error.message || "").toLowerCase();
+      const isBanned =
+        msg.includes("banned") ||
+        msg.includes("blocked") ||
+        msg.includes("disabled") ||
+        msg.includes("user is banned") ||
+        (error as { code?: string }).code === "user_banned";
+      if (isBanned) {
+        setBanned(true);
+        toast.error("Your account is banned. Please contact admin.");
+      } else {
+        setBanned(false);
+        toast.error(error.message);
+      }
     } else {
+      setBanned(false);
       toast.success("Signed in");
     }
   };
@@ -85,6 +100,23 @@ export function AuthForm() {
         </TabsList>
 
         <TabsContent value="signin">
+          {banned && (
+            <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="font-semibold">🚫 You are banned</div>
+              <div className="mt-1 text-destructive/90">
+                Your account has been banned by the admin. Please contact admin
+                to restore access.
+                <br />
+                <span className="font-medium">Admin:</span>{" "}
+                <a
+                  href="mailto:rajpandey565758@gmail.com"
+                  className="underline"
+                >
+                  rajpandey565758@gmail.com
+                </a>
+              </div>
+            </div>
+          )}
           <form onSubmit={onSignIn} className="space-y-3 mt-4">
             <div className="space-y-1">
               <Label htmlFor="si-email">Email</Label>
