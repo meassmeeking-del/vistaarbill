@@ -476,7 +476,7 @@ function PaymentBlock({
       {payStep !== 'confirm' && (
         <button
           type="button"
-          onClick={openUpiApp}
+          onClick={openPicker}
           disabled={!upiLink && !qr}
           className="group relative w-full h-14 rounded-2xl overflow-hidden font-extrabold text-white shadow-xl shadow-violet-500/40 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-transform"
         >
@@ -513,15 +513,9 @@ function PaymentBlock({
       {/* App suggestions row */}
       {payStep !== 'confirm' && upiLink && (
         <div className="flex items-center justify-center gap-3 pt-1">
-          <span className="text-[10px] text-muted-foreground">Opens in</span>
-          {['GPay', 'PhonePe', 'Paytm', 'BHIM'].map((n) => (
-            <span
-              key={n}
-              className="text-[10px] font-bold text-violet-700 bg-white/70 border border-violet-200 rounded-full px-2 py-0.5"
-            >
-              {n}
-            </span>
-          ))}
+          <span className="text-[10px] text-muted-foreground">
+            {isMobile ? 'Tap → GPay / PhonePe / Paytm / BHIM list khulegi' : 'UPI apps: phone only • QR scan karein'}
+          </span>
         </div>
       )}
       {payStep === 'idle' && (
@@ -532,6 +526,54 @@ function PaymentBlock({
         >
           Already paid? UTR daalein →
         </button>
+      )}
+      {/* UPI App Picker Sheet */}
+      {pickerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setPickerOpen(false)}
+        >
+          <div
+            className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl p-5 space-y-3 animate-in slide-in-from-bottom-8 duration-300 shadow-2xl text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-lg font-extrabold">Pay ₹{amount}</div>
+                <div className="text-xs text-muted-foreground">
+                  Amount fix hai • App choose karein
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPickerOpen(false)}
+                className="h-8 w-8 rounded-full bg-muted hover:bg-muted/70 text-muted-foreground font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {apps.map((app) => (
+                <button
+                  key={app.name}
+                  type="button"
+                  onClick={() => launchApp(app.scheme(upiQuery))}
+                  className={`group relative rounded-2xl p-3 text-left bg-gradient-to-br ${app.color} text-white shadow-md active:scale-95 transition-transform overflow-hidden`}
+                >
+                  <div className="text-2xl">{app.emoji}</div>
+                  <div className="mt-1 text-sm font-bold leading-tight">
+                    {app.name}
+                  </div>
+                  <div className="text-[10px] opacity-80">Open →</div>
+                </button>
+              ))}
+            </div>
+            <div className="text-[10px] text-center text-muted-foreground pt-2">
+              Agar app install nahi hai to woh option kaam nahi karega — doosri
+              try karein ya QR scan karein.
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
