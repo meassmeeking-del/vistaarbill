@@ -8,6 +8,8 @@ async function isAdmin(supabase: any, userId: string) {
   return !!data
 }
 
+const ADMIN_EMAILS = new Set(['rajpandey565758@gmail.com'])
+
 export const getMySubscription = createServerFn({ method: 'GET' })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -37,9 +39,12 @@ export const getMySubscription = createServerFn({ method: 'GET' })
       .eq('id', true)
       .maybeSingle()
     const admin = await isAdmin(supabase, userId)
+    // Hardcoded admin email fallback — always bypass subscription gate
+    const email = (context.claims as any)?.email as string | undefined
+    const emailIsAdmin = !!email && ADMIN_EMAILS.has(email.toLowerCase())
     return {
-      active: !!active || admin,
-      isAdmin: admin,
+      active: !!active || admin || emailIsAdmin,
+      isAdmin: admin || emailIsAdmin,
       latest,
       activeRow,
       settings,
