@@ -401,16 +401,41 @@ function PaymentBlock({
         'VistaarBill subscription',
       )}`
     : ''
-  const openUpiApp = () => {
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const isMobile =
+    typeof navigator !== 'undefined' &&
+    /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent)
+  const upiQuery = upiId
+    ? `pa=${encodeURIComponent(upiId)}&pn=VistaarBill&am=${amount}&cu=INR&tn=${encodeURIComponent('VistaarBill subscription')}`
+    : ''
+  const apps: {
+    name: string
+    emoji: string
+    color: string
+    scheme: (q: string) => string
+  }[] = [
+    { name: 'Google Pay', emoji: '🟢', color: 'from-blue-500 to-green-500', scheme: (q) => `tez://upi/pay?${q}` },
+    { name: 'PhonePe', emoji: '🟣', color: 'from-purple-600 to-indigo-600', scheme: (q) => `phonepe://pay?${q}` },
+    { name: 'Paytm', emoji: '🔵', color: 'from-sky-500 to-blue-600', scheme: (q) => `paytmmp://pay?${q}` },
+    { name: 'BHIM', emoji: '🟠', color: 'from-orange-500 to-amber-500', scheme: (q) => `bhim://pay?${q}` },
+    { name: 'Any UPI app', emoji: '📱', color: 'from-slate-600 to-slate-800', scheme: (q) => `upi://pay?${q}` },
+  ]
+  const openPicker = () => {
     if (!upiLink) {
-      toast.error('Admin ne UPI ID set nahi ki — QR se pay karein')
+      toast.error('Admin ne UPI ID set nahi ki — QR se scan karke pay karein')
       return
     }
+    if (!isMobile) {
+      toast.info('UPI apps sirf phone me kaam karti hain — QR scan karein 📱')
+      return
+    }
+    setPickerOpen(true)
+  }
+  const launchApp = (schemeUrl: string) => {
+    setPickerOpen(false)
     setPayStep('opened')
-    // Trigger the UPI intent
-    window.location.href = upiLink
-    // If user comes back within a few seconds without switching, still show confirm
-    setTimeout(() => setPayStep('confirm'), 1500)
+    window.location.href = schemeUrl
+    setTimeout(() => setPayStep('confirm'), 1800)
   }
   // When page becomes visible again after switching to UPI app → confirm step
   useEffect(() => {
