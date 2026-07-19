@@ -285,6 +285,10 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
 }
 
 function LockShell({ children }: { children: ReactNode }) {
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    window.location.reload()
+  }
   return (
     <div
       className="min-h-screen p-4 relative overflow-hidden flex items-center justify-center"
@@ -305,6 +309,15 @@ function LockShell({ children }: { children: ReactNode }) {
           </p>
         </div>
         <div className="p-5 space-y-4">{children}</div>
+        <div className="px-5 pb-5 pt-1 border-t bg-muted/30">
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="w-full text-xs font-semibold text-muted-foreground hover:text-foreground py-2"
+          >
+            🔄 Doosre account se login karein / Sign out
+          </button>
+        </div>
       </div>
     </div>
   )
