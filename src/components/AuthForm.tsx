@@ -6,8 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, Smartphone } from "lucide-react";
-import { sendPhoneOtp, confirmPhoneOtp } from "@/lib/otp.functions";
+import { Loader2, ShieldCheck, Smartphone, KeyRound } from "lucide-react";
+import {
+  sendPhoneOtp,
+  confirmPhoneOtp,
+  checkAccountExists,
+  phoneOtpLogin,
+  phoneOtpResetPassword,
+} from "@/lib/otp.functions";
 
 const signInSchema = z.object({
   email: z.string().trim().email("Invalid email").max(255),
@@ -24,7 +30,7 @@ const signUpSchema = signInSchema.extend({
 });
 
 export function AuthForm() {
-  const [tab, setTab] = useState<"signin" | "signup">("signin");
+  const [tab, setTab] = useState<"signin" | "signup" | "otp">("signin");
   const [loading, setLoading] = useState(false);
   const [banned, setBanned] = useState(false);
   const [email, setEmail] = useState("");
@@ -37,6 +43,14 @@ export function AuthForm() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
 
+  // OTP login / password reset tab
+  const [otpMode, setOtpMode] = useState<"login" | "reset">("login");
+  const [rPhone, setRPhone] = useState("");
+  const [rOtp, setROtp] = useState("");
+  const [rPassword, setRPassword] = useState("");
+  const [rSent, setRSent] = useState(false);
+  const [rLoading, setRLoading] = useState(false);
+
   const onSendOtp = async () => {
     const parsed = signUpSchema.shape.phone.safeParse(phone);
     if (!parsed.success) {
@@ -45,6 +59,15 @@ export function AuthForm() {
     }
     setOtpLoading(true);
     try {
+      const taken = await checkAccountExists({ data: { phone } });
+      if (taken.phoneTaken) {
+        toast.error(
+          "Ye mobile number pehle se registered hai — OTP se login karein",
+        );
+        setTab("otp");
+        setRPhone(phone);
+        return;
+      }
       await sendPhoneOtp({ data: { phone } });
       setOtpSent(true);
       toast.success("OTP bhej diya gaya aapke number par");
@@ -65,6 +88,68 @@ export function AuthForm() {
       toast.error(err instanceof Error ? err.message : "OTP galat hai");
     } finally {
       setOtpLoading(false);
+    }
+  };
+
+  const onSendResetOtp = async () => {
+    if (!/^(\+?\d{10,15})$/.test(rPhone.trim())) {
+      toast.error("Valid mobile number daalein");
+      return;
+    }
+    setRLoading(true);
+    try {
+      const exists = await checkAccountExists({ data: { phone: rPhone } });
+      if (!exists.phoneTaken) {
+        toast.error("Is number se koi account nahi mila — pehle sign up karein");
+        return;
+      }
+      await sendPhoneOtp({ data: { phone: rPhone } });
+      setRSent(true);
+      toast.success("OTP bhej diya gaya");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "OTP bhejne me problem");
+    } finally {
+      setRLoading(false);
+    }
+  };
+
+  const onOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (rOtp.trim().length < 4) {
+      toast.error("OTP daalein");
+      return;
+    }
+    setRLoading(true);
+    try {
+      if (otpMode === "login") {
+        const res = await phoneOtpLogin({
+          data: { phone: rPhone, code: rOtp },
+        });
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: res.token_hash,
+          type: "magiclink",
+        });
+        if (error) throw new Error(error.message);
+        toast.success("Login ho gaya ✅ Settings me jakar password set karein");
+      } else {
+        if (rPassword.length < 6) {
+          toast.error("Naya password kam se kam 6 character ka ho");
+          return;
+        }
+        await phoneOtpResetPassword({
+          data: { phone: rPhone, code: rOtp, password: rPassword },
+        });
+        toast.success("Password set ho gaya — ab sign in karein");
+        setTab("signin");
+        setRSent(false);
+        setROtp("");
+        setRPassword("");
+      }
+    } catch (err) {
+      const m = err instanceof Error ? err.message : "OTP galat hai";
+      toast.error(m.includes("galat") ? "OTP wrong hai ❌" : m);
+    } finally {
+      setRLoading(false);
     }
   };
 
@@ -117,6 +202,23 @@ export function AuthForm() {
       return;
     }
     setLoading(true);
+    try {
+      const taken = await checkAccountExists({
+        data: { email: parsed.data.email, phone: parsed.data.phone },
+      });
+      if (taken.emailTaken) {
+        setLoading(false);
+        toast.error("Ye email pehle se registered hai — sign in karein");
+        return;
+      }
+      if (taken.phoneTaken) {
+        setLoading(false);
+        toast.error("Ye mobile number pehle se registered hai");
+        return;
+      }
+    } catch {
+      /* ignore check failure, signUp will still error out */
+    }
     const { error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
@@ -140,10 +242,14 @@ export function AuthForm() {
 
   return (
     <div className="rounded-lg border bg-card p-6 shadow-sm">
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")}>
-        <TabsList className="grid grid-cols-2 w-full">
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setTab(v as "signin" | "signup" | "otp")}
+      >
+        <TabsList className="grid grid-cols-3 w-full">
           <TabsTrigger value="signin">Sign in</TabsTrigger>
           <TabsTrigger value="signup">Sign up</TabsTrigger>
+          <TabsTrigger value="otp">OTP login</TabsTrigger>
         </TabsList>
 
         <TabsContent value="signin">
@@ -191,6 +297,107 @@ export function AuthForm() {
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Sign in
             </Button>
+            <button
+              type="button"
+              onClick={() => {
+                setOtpMode("reset");
+                setTab("otp");
+              }}
+              className="w-full text-sm text-muted-foreground underline"
+            >
+              Password bhool gaye? OTP se reset karein
+            </button>
+          </form>
+        </TabsContent>
+
+        <TabsContent value="otp">
+          <form onSubmit={onOtpSubmit} className="space-y-3 mt-4">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={otpMode === "login" ? "default" : "outline"}
+                onClick={() => setOtpMode("login")}
+              >
+                <Smartphone className="h-4 w-4 mr-2" /> OTP se login
+              </Button>
+              <Button
+                type="button"
+                variant={otpMode === "reset" ? "default" : "outline"}
+                onClick={() => setOtpMode("reset")}
+              >
+                <KeyRound className="h-4 w-4 mr-2" /> Password reset
+              </Button>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="r-phone">Registered mobile number</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="r-phone"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="9876543210"
+                  value={rPhone}
+                  onChange={(e) => {
+                    setRPhone(e.target.value);
+                    setRSent(false);
+                  }}
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={onSendResetOtp}
+                  disabled={rLoading || !rPhone}
+                >
+                  {rLoading && !rSent && (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  )}
+                  {rSent ? "Resend" : "Send OTP"}
+                </Button>
+              </div>
+            </div>
+
+            {rSent && (
+              <>
+                <div className="space-y-1">
+                  <Label htmlFor="r-otp">OTP</Label>
+                  <Input
+                    id="r-otp"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="6-digit OTP"
+                    value={rOtp}
+                    onChange={(e) =>
+                      setROtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                  />
+                </div>
+                {otpMode === "reset" && (
+                  <div className="space-y-1">
+                    <Label htmlFor="r-pw">New password</Label>
+                    <Input
+                      id="r-pw"
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={6}
+                      value={rPassword}
+                      onChange={(e) => setRPassword(e.target.value)}
+                    />
+                  </div>
+                )}
+                <Button type="submit" className="w-full" disabled={rLoading}>
+                  {rLoading && (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  )}
+                  {otpMode === "login" ? "Login" : "Set new password"}
+                </Button>
+              </>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Jinka password set nahi hai woh OTP se login karke Settings →
+              Account me password bana sakte hain.
+            </p>
           </form>
         </TabsContent>
 
