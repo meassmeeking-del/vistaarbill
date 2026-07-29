@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { Volume2, Vibrate } from "lucide-react";
+import { Volume2, Vibrate, KeyRound, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   getVolume,
   setVolume,
@@ -20,6 +21,23 @@ export function ShopSettings() {
   const [form, setForm] = useState(shop);
   const [volume, setVol] = useState(() => Math.round(getVolume() * 100));
   const [hapticLvl, setHap] = useState(() => Math.round(getHapticIntensity() * 100));
+  const [newPw, setNewPw] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const savePassword = async () => {
+    if (newPw.length < 6) {
+      toast.error("Password kam se kam 6 character ka ho");
+      return;
+    }
+    setPwLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPw });
+    setPwLoading(false);
+    if (error) toast.error(error.message);
+    else {
+      setNewPw("");
+      toast.success("Password set ho gaya ✅");
+    }
+  };
 
   useEffect(() => {
     setForm(shop);
@@ -55,6 +73,31 @@ export function ShopSettings() {
           }}
         >
           Save
+        </Button>
+      </div>
+
+      <div className="rounded-lg border bg-card text-card-foreground p-4 space-y-3">
+        <h3 className="font-semibold flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-primary" /> Account password
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          OTP se login kiya hai aur password set nahi hai? Yahan naya password
+          bana lein.
+        </p>
+        <div className="space-y-1">
+          <Label htmlFor="acct-pw">New password</Label>
+          <Input
+            id="acct-pw"
+            type="password"
+            autoComplete="new-password"
+            minLength={6}
+            value={newPw}
+            onChange={(e) => setNewPw(e.target.value)}
+          />
+        </div>
+        <Button onClick={savePassword} disabled={pwLoading}>
+          {pwLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          Set password
         </Button>
       </div>
 
