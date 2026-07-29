@@ -112,3 +112,82 @@ export async function isPhoneVerified(rawPhone: string) {
     .maybeSingle()
   return !!data
 }
+
+type AdminUser = {
+  id: string
+  email?: string | null
+  user_metadata?: Record<string, unknown> | null
+}
+
+async function listAllUsers(): Promise<AdminUser[]> {
+  const all: AdminUser[] = []
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 })
+    if (error) throw new Error(error.message)
+    const users = (data?.users ?? []) as AdminUser[]
+    all.push(...users)
+    if (users.length < 200) break
+  }
+  return all
+}
+
+export async function findUserByPhone(rawPhone: string) {
+  const phone = normalizePhone(rawPhone)
+  const users = await listAllUsers()
+  return (
+    users.find((u) => {
+      const p = (u.user_metadata?.phone as string | undefined) || ''
+      return p ? normalizePhone(p) === phone : false
+    }) ?? null
+  )
+}
+
+export async function findUserByEmail(rawEmail: string) {
+  const email = (rawEmail || '').trim().toLowerCase()
+  const users = await listAllUsers()
+  return users.find((u) => (u.email || '').toLowerCase() === email) ?? null
+}
+
+export async function accountExists(email?: string, phone?: string) {
+  const users = await listAllUsers()
+  const e = (email || '').trim().toLowerCase()
+  const p = phone ? normalizePhone(phone) : ''
+  const emailTaken = !!e && users.some((u) => (u.email || '').toLowerCase() === e)
+  const phoneTaken =
+    !!p &&
+    users.some((u) => {
+      const up = (u.user_metadata?.phone as string | undefined) || ''
+      return up ? normalizePhone(up) === p : false
+    })
+  return { emailTaken, phoneTaken }
+}
+
+/** Verify OTP for an existing account's phone and return a magic-link token for sign-in. */
+export async function otpLogin(rawPhone: string, code: string) {
+  const user = await findUserByPhone(rawPhone)
+  if (!user || !user.email) throw new Error('Is number se koi account nahi mila')
+  await verifyOtp(rawPhone, code)
+
+  const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+    type: 'magiclink',
+    email: user.email,
+  })
+  if (error) throw new Error(error.message)
+  const props = data?.properties as { hashed_token?: string } | undefined
+  if (!props?.hashed_token) throw new Error('Login token banane me problem')
+  return { email: user.email, token_hash: props.hashed_token }
+}
+
+/** Verify OTP and set a new password for the account linked to that phone. */
+export async function otpResetPassword(rawPhone: string, code: string, newPassword: string) {
+  if (!newPassword || newPassword.length < 6) throw new Error('Password kam se kam 6 character ka ho')
+  const user = await findUserByPhone(rawPhone)
+  if (!user) throw new Error('Is number se koi account nahi mila')
+  await verifyOtp(rawPhone, code)
+
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+    password: newPassword,
+  })
+  if (error) throw new Error(error.message)
+  return { email: user.email, ok: true }
+}
