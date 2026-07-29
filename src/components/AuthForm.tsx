@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldCheck, Smartphone } from "lucide-react";
+import { sendPhoneOtp, confirmPhoneOtp } from "@/lib/otp.functions";
 
 const signInSchema = z.object({
   email: z.string().trim().email("Invalid email").max(255),
@@ -16,6 +17,10 @@ const signInSchema = z.object({
 const signUpSchema = signInSchema.extend({
   displayName: z.string().trim().min(1, "Name required").max(100),
   shopName: z.string().trim().max(100).optional(),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^(\+?\d{10,15})$/, "Valid mobile number daalein"),
 });
 
 export function AuthForm() {
@@ -26,6 +31,42 @@ export function AuthForm() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [shopName, setShopName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+
+  const onSendOtp = async () => {
+    const parsed = signUpSchema.shape.phone.safeParse(phone);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0].message);
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      await sendPhoneOtp({ data: { phone } });
+      setOtpSent(true);
+      toast.success("OTP bhej diya gaya aapke number par");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "OTP bhejne me problem");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const onVerifyOtp = async () => {
+    setOtpLoading(true);
+    try {
+      await confirmPhoneOtp({ data: { phone, code: otp } });
+      setOtpVerified(true);
+      toast.success("Number verify ho gaya ✅");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "OTP galat hai");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   const onSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,10 +105,15 @@ export function AuthForm() {
       email,
       password,
       displayName,
+      phone,
       shopName: shopName || undefined,
     });
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
+      return;
+    }
+    if (!otpVerified) {
+      toast.error("Pehle mobile number OTP se verify karein");
       return;
     }
     setLoading(true);
@@ -79,6 +125,7 @@ export function AuthForm() {
         data: {
           display_name: parsed.data.displayName,
           shop_name: parsed.data.shopName,
+          phone: parsed.data.phone,
         },
       },
     });
@@ -165,6 +212,70 @@ export function AuthForm() {
                 value={shopName}
                 onChange={(e) => setShopName(e.target.value)}
               />
+            </div>
+            <div className="space-y-2 rounded-lg border p-3">
+              <Label htmlFor="su-phone" className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4" /> Mobile number (OTP verify)
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="su-phone"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="9876543210"
+                  value={phone}
+                  disabled={otpVerified}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    setOtpSent(false);
+                    setOtpVerified(false);
+                  }}
+                  required
+                />
+                {!otpVerified && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={onSendOtp}
+                    disabled={otpLoading || !phone}
+                  >
+                    {otpLoading && !otpSent && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
+                    {otpSent ? "Resend" : "Send OTP"}
+                  </Button>
+                )}
+              </div>
+
+              {otpVerified ? (
+                <p className="flex items-center gap-1.5 text-sm font-medium text-primary">
+                  <ShieldCheck className="h-4 w-4" /> Number verified
+                </p>
+              ) : (
+                otpSent && (
+                  <div className="flex gap-2">
+                    <Input
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="6-digit OTP"
+                      value={otp}
+                      onChange={(e) =>
+                        setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                      }
+                    />
+                    <Button
+                      type="button"
+                      onClick={onVerifyOtp}
+                      disabled={otpLoading || otp.length < 4}
+                    >
+                      {otpLoading && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
+                      Verify
+                    </Button>
+                  </div>
+                )
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="su-email">Email</Label>
