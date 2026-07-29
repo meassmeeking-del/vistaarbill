@@ -213,6 +213,70 @@ export function AuthForm() {
                 onChange={(e) => setShopName(e.target.value)}
               />
             </div>
+            <div className="space-y-2 rounded-lg border p-3">
+              <Label htmlFor="su-phone" className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4" /> Mobile number (OTP verify)
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="su-phone"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="9876543210"
+                  value={phone}
+                  disabled={otpVerified}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    setOtpSent(false);
+                    setOtpVerified(false);
+                  }}
+                  required
+                />
+                {!otpVerified && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={onSendOtp}
+                    disabled={otpLoading || !phone}
+                  >
+                    {otpLoading && !otpSent && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
+                    {otpSent ? "Resend" : "Send OTP"}
+                  </Button>
+                )}
+              </div>
+
+              {otpVerified ? (
+                <p className="flex items-center gap-1.5 text-sm font-medium text-primary">
+                  <ShieldCheck className="h-4 w-4" /> Number verified
+                </p>
+              ) : (
+                otpSent && (
+                  <div className="flex gap-2">
+                    <Input
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="6-digit OTP"
+                      value={otp}
+                      onChange={(e) =>
+                        setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                      }
+                    />
+                    <Button
+                      type="button"
+                      onClick={onVerifyOtp}
+                      disabled={otpLoading || otp.length < 4}
+                    >
+                      {otpLoading && (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      )}
+                      Verify
+                    </Button>
+                  </div>
+                )
+              )}
+            </div>
             <div className="space-y-1">
               <Label htmlFor="su-email">Email</Label>
               <Input
