@@ -20,6 +20,8 @@ export type Shop = {
   phoneNumber: string;
   upiId: string;
   footerText: string;
+  smsEnabled: boolean;
+  smsDefaultNumber: string;
 };
 
 export type Sale = {
@@ -64,6 +66,8 @@ export const defaultShop: Shop = {
   phoneNumber: "",
   upiId: "",
   footerText: "Thank you, visit again!",
+  smsEnabled: false,
+  smsDefaultNumber: "",
 };
 
 const seedProducts: Product[] = [
@@ -104,7 +108,7 @@ export function useProducts() {
 
 export function useShop() {
   const [shop, setShop] = useStored<Shop>(SHOP_KEY, defaultShop);
-  return { shop, setShop };
+  return { shop: { ...defaultShop, ...shop }, setShop };
 }
 
 export function useSales() {
