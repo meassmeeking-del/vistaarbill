@@ -42,6 +42,7 @@ export function AuthForm() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
 
   // OTP login / password reset tab
   const [otpMode, setOtpMode] = useState<"login" | "reset">("login");
@@ -50,6 +51,7 @@ export function AuthForm() {
   const [rPassword, setRPassword] = useState("");
   const [rSent, setRSent] = useState(false);
   const [rLoading, setRLoading] = useState(false);
+  const [rError, setRError] = useState<string | null>(null);
 
   const onSendOtp = async () => {
     const parsed = signUpSchema.shape.phone.safeParse(phone);
