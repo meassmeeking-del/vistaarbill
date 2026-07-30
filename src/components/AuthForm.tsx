@@ -529,6 +529,16 @@ export function AuthForm() {
                   </div>
                 )
               )}
+              {otpError && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">
+                  {otpError}
+                </div>
+              )}
+              {otpSent && !otpError && !otpVerified && (
+                <div className="rounded-md border border-primary/40 bg-primary/10 p-2 text-sm text-primary">
+                  ✅ OTP bhej diya gaya {phone} par — SMS check karein
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="su-email">Email</Label>
