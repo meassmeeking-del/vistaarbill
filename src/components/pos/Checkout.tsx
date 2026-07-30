@@ -11,11 +11,12 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Minus, Plus, Trash2, Receipt, ScanLine } from "lucide-react";
+import { Minus, Plus, Trash2, Receipt, ScanLine, MessageSquare, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Receipt as ReceiptView } from "./Receipt";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { ReceiptPreview } from "./ReceiptPreview";
+import { sendBillSms } from "@/lib/sms.functions";
 
 export function Checkout() {
   const { products, updateProduct, addProduct } = useProducts();
@@ -27,6 +28,8 @@ export function Checkout() {
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [custPhone, setCustPhone] = useState("");
+  const [smsSending, setSmsSending] = useState(false);
   const [quickAdd, setQuickAdd] = useState<{
     open: boolean;
     barcode: string;
@@ -70,6 +73,38 @@ export function Checkout() {
 
   const removeItem = (productId: string) =>
     setCart(cart.filter((c) => c.product.id !== productId));
+
+  const buildSmsText = (sale: Sale) => {
+    const lines = sale.items
+      .map((c) => `${c.product.name} x${c.quantity} = ${(c.product.price * c.quantity).toFixed(2)}`)
+      .join("\n");
+    return [
+      `${shop.name || "Bill"} - Bill #${sale.id.slice(0, 6)}`,
+      lines,
+      `Total: Rs ${sale.total.toFixed(2)}`,
+      shop.upiId ? `UPI: ${shop.upiId}` : "",
+      shop.footerText || "Thank you!",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  };
+
+  const sendSmsFor = async (sale: Sale, phoneRaw: string) => {
+    const phone = (phoneRaw || "").trim();
+    if (!phone) {
+      toast.error("Customer ka number daalein");
+      return;
+    }
+    setSmsSending(true);
+    try {
+      await sendBillSms({ data: { phone, message: buildSmsText(sale) } });
+      toast.success(`Bill SMS bhej diya ${phone} par ✅`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "SMS bhejne me problem");
+    } finally {
+      setSmsSending(false);
+    }
+  };
 
   const subtotal = cart.reduce((s, c) => s + c.product.price * c.quantity, 0);
   const tax = (subtotal * (parseFloat(taxPct) || 0)) / 100;
@@ -140,6 +175,7 @@ export function Checkout() {
       subtotal,
       tax,
       total,
+      customerPhone: custPhone.trim() || undefined,
     };
     addSale(sale);
     cart.forEach((c) =>
@@ -151,6 +187,8 @@ export function Checkout() {
     setCart([]);
     setPreviewOpen(true);
     toast.success("Sale recorded");
+    const target = custPhone.trim() || shop.smsDefaultNumber?.trim() || "";
+    if (shop.smsEnabled && target) void sendSmsFor(sale, target);
   };
 
 
@@ -266,6 +304,20 @@ export function Checkout() {
               onChange={(e) => setTaxPct(e.target.value)}
             />
           </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="cust-phone" className="text-xs whitespace-nowrap">
+              SMS no.
+            </Label>
+            <Input
+              id="cust-phone"
+              type="tel"
+              inputMode="tel"
+              className="h-8"
+              placeholder={shop.smsDefaultNumber || "9876543210"}
+              value={custPhone}
+              onChange={(e) => setCustPhone(e.target.value)}
+            />
+          </div>
           <div className="space-y-1 text-sm border-t pt-3">
             <div className="flex justify-between text-muted-foreground">
               <span>Subtotal</span>
@@ -294,6 +346,23 @@ export function Checkout() {
               onClick={() => setPreviewOpen(true)}
             >
               View Last Receipt
+            </Button>
+          )}
+          {lastSale && (
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={smsSending}
+              onClick={() =>
+                sendSmsFor(lastSale, custPhone.trim() || shop.smsDefaultNumber || "")
+              }
+            >
+              {smsSending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <MessageSquare className="mr-2 h-4 w-4" />
+              )}
+              Send bill SMS
             </Button>
           )}
         </aside>
