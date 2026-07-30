@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Volume2, Vibrate, KeyRound, Loader2 } from "lucide-react";
+import { Volume2, Vibrate, KeyRound, Loader2, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getVolume,
@@ -43,7 +44,7 @@ export function ShopSettings() {
     setForm(shop);
   }, [shop]);
 
-  const fields: { key: keyof typeof form; label: string }[] = [
+  const fields: { key: "name" | "addressLine1" | "addressLine2" | "phoneNumber" | "upiId" | "footerText"; label: string }[] = [
     { key: "name", label: "Shop Name" },
     { key: "addressLine1", label: "Address Line 1" },
     { key: "addressLine2", label: "Address Line 2" },
@@ -73,6 +74,47 @@ export function ShopSettings() {
           }}
         >
           Save
+        </Button>
+      </div>
+
+      <div className="rounded-lg border bg-card text-card-foreground p-4 space-y-3">
+        <h3 className="font-semibold flex items-center gap-2">
+          <MessageSquare className="h-4 w-4 text-primary" /> Bill SMS
+        </h3>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <Label htmlFor="sms-auto">Auto SMS on checkout</Label>
+            <p className="text-xs text-muted-foreground">
+              Bill banate hi customer ke number par SMS chala jayega.
+            </p>
+          </div>
+          <Switch
+            id="sms-auto"
+            checked={!!form.smsEnabled}
+            onCheckedChange={(v) => setForm({ ...form, smsEnabled: v })}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="sms-number">Default SMS number</Label>
+          <Input
+            id="sms-number"
+            type="tel"
+            inputMode="tel"
+            placeholder="9876543210"
+            value={form.smsDefaultNumber || ""}
+            onChange={(e) => setForm({ ...form, smsDefaultNumber: e.target.value })}
+          />
+          <p className="text-xs text-muted-foreground">
+            Customer number na ho to yahi number par bill SMS jayega (khali chhod sakte hain).
+          </p>
+        </div>
+        <Button
+          onClick={() => {
+            setShop(form);
+            toast.success("SMS settings saved");
+          }}
+        >
+          Save SMS settings
         </Button>
       </div>
 
