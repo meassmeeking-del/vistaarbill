@@ -42,6 +42,7 @@ export function AuthForm() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
 
   // OTP login / password reset tab
   const [otpMode, setOtpMode] = useState<"login" | "reset">("login");
@@ -50,6 +51,7 @@ export function AuthForm() {
   const [rPassword, setRPassword] = useState("");
   const [rSent, setRSent] = useState(false);
   const [rLoading, setRLoading] = useState(false);
+  const [rError, setRError] = useState<string | null>(null);
 
   const onSendOtp = async () => {
     const parsed = signUpSchema.shape.phone.safeParse(phone);
@@ -68,11 +70,19 @@ export function AuthForm() {
         setRPhone(phone);
         return;
       }
-      await sendPhoneOtp({ data: { phone } });
+      const res = await sendPhoneOtp({ data: { phone } });
+      if (!res.ok) {
+        setOtpError(res.error);
+        toast.error(res.error);
+        return;
+      }
+      setOtpError(null);
       setOtpSent(true);
-      toast.success("OTP bhej diya gaya aapke number par");
+      toast.success("OTP bhej diya gaya aapke number par ✅");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "OTP bhejne me problem");
+      const m = err instanceof Error ? err.message : "OTP bhejne me problem";
+      setOtpError(m);
+      toast.error(m);
     } finally {
       setOtpLoading(false);
     }
@@ -81,7 +91,13 @@ export function AuthForm() {
   const onVerifyOtp = async () => {
     setOtpLoading(true);
     try {
-      await confirmPhoneOtp({ data: { phone, code: otp } });
+      const res = await confirmPhoneOtp({ data: { phone, code: otp } });
+      if (!res.ok) {
+        setOtpError(res.error);
+        toast.error(res.error.includes("galat") ? "OTP wrong hai ❌" : res.error);
+        return;
+      }
+      setOtpError(null);
       setOtpVerified(true);
       toast.success("Number verify ho gaya ✅");
     } catch (err) {
@@ -103,11 +119,19 @@ export function AuthForm() {
         toast.error("Is number se koi account nahi mila — pehle sign up karein");
         return;
       }
-      await sendPhoneOtp({ data: { phone: rPhone } });
+      const res = await sendPhoneOtp({ data: { phone: rPhone } });
+      if (!res.ok) {
+        setRError(res.error);
+        toast.error(res.error);
+        return;
+      }
+      setRError(null);
       setRSent(true);
-      toast.success("OTP bhej diya gaya");
+      toast.success("OTP bhej diya gaya ✅");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "OTP bhejne me problem");
+      const m = err instanceof Error ? err.message : "OTP bhejne me problem";
+      setRError(m);
+      toast.error(m);
     } finally {
       setRLoading(false);
     }
@@ -125,20 +149,32 @@ export function AuthForm() {
         const res = await phoneOtpLogin({
           data: { phone: rPhone, code: rOtp },
         });
+        if (!res.ok) {
+          setRError(res.error);
+          toast.error(res.error.includes("galat") ? "OTP wrong hai ❌" : res.error);
+          return;
+        }
         const { error } = await supabase.auth.verifyOtp({
           token_hash: res.token_hash,
           type: "magiclink",
         });
         if (error) throw new Error(error.message);
+        setRError(null);
         toast.success("Login ho gaya ✅ Settings me jakar password set karein");
       } else {
         if (rPassword.length < 6) {
           toast.error("Naya password kam se kam 6 character ka ho");
           return;
         }
-        await phoneOtpResetPassword({
+        const res = await phoneOtpResetPassword({
           data: { phone: rPhone, code: rOtp, password: rPassword },
         });
+        if (!res.ok) {
+          setRError(res.error);
+          toast.error(res.error.includes("galat") ? "OTP wrong hai ❌" : res.error);
+          return;
+        }
+        setRError(null);
         toast.success("Password set ho gaya — ab sign in karein");
         setTab("signin");
         setRSent(false);
@@ -398,6 +434,16 @@ export function AuthForm() {
               Jinka password set nahi hai woh OTP se login karke Settings →
               Account me password bana sakte hain.
             </p>
+            {rError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">
+                {rError}
+              </div>
+            )}
+            {rSent && !rError && (
+              <div className="rounded-md border border-primary/40 bg-primary/10 p-2 text-sm text-primary">
+                ✅ OTP bhej diya gaya {rPhone} par
+              </div>
+            )}
           </form>
         </TabsContent>
 
@@ -482,6 +528,16 @@ export function AuthForm() {
                     </Button>
                   </div>
                 )
+              )}
+              {otpError && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">
+                  {otpError}
+                </div>
+              )}
+              {otpSent && !otpError && !otpVerified && (
+                <div className="rounded-md border border-primary/40 bg-primary/10 p-2 text-sm text-primary">
+                  ✅ OTP bhej diya gaya {phone} par — SMS check karein
+                </div>
               )}
             </div>
             <div className="space-y-1">

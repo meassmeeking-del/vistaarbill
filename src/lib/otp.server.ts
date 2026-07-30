@@ -40,7 +40,24 @@ export async function sendSms(to: string, body: string) {
   if (!res.ok) {
     const errorBody = await res.text()
     console.error(`Twilio send failed [${res.status}]: ${errorBody}`)
-    throw new Error(`SMS bhejne me problem [${res.status}]: ${errorBody}`)
+    let code: number | undefined
+    let msg = errorBody
+    try {
+      const j = JSON.parse(errorBody) as { code?: number; message?: string }
+      code = j.code
+      if (j.message) msg = j.message
+    } catch {
+      /* keep raw text */
+    }
+    if (code === 21608) {
+      throw new Error(
+        'Twilio trial account hai — sirf verified numbers par SMS jaata hai. Twilio me is number ko verify karein ya paid Twilio number lein.',
+      )
+    }
+    if (code === 21211 || code === 21614) throw new Error('Mobile number sahi nahi hai')
+    if (code === 21606 || code === 21659)
+      throw new Error('Twilio sender number galat hai (TWILIO_FROM_NUMBER). Admin se contact karein.')
+    throw new Error(`SMS nahi gaya: ${msg}`)
   }
   return (await res.json()) as { sid?: string }
 }

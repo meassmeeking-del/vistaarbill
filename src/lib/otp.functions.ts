@@ -11,13 +11,27 @@ import {
 
 export const sendPhoneOtp = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => z.object({ phone: z.string().min(6).max(20) }).parse(data))
-  .handler(async ({ data }) => createAndSendOtp(data.phone))
+  .handler(async ({ data }) => {
+    try {
+      const r = await createAndSendOtp(data.phone)
+      return { ok: true as const, phone: r.phone }
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : 'OTP bhejne me problem' }
+    }
+  })
 
 export const confirmPhoneOtp = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) =>
     z.object({ phone: z.string().min(6).max(20), code: z.string().min(4).max(8) }).parse(data),
   )
-  .handler(async ({ data }) => verifyOtp(data.phone, data.code))
+  .handler(async ({ data }) => {
+    try {
+      await verifyOtp(data.phone, data.code)
+      return { ok: true as const }
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : 'OTP galat hai' }
+    }
+  })
 
 export const checkPhoneVerified = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => z.object({ phone: z.string().min(6).max(20) }).parse(data))
@@ -38,7 +52,14 @@ export const phoneOtpLogin = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) =>
     z.object({ phone: z.string().min(6).max(20), code: z.string().min(4).max(8) }).parse(data),
   )
-  .handler(async ({ data }) => otpLogin(data.phone, data.code))
+  .handler(async ({ data }) => {
+    try {
+      const r = await otpLogin(data.phone, data.code)
+      return { ok: true as const, ...r }
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : 'Login nahi ho paya' }
+    }
+  })
 
 export const phoneOtpResetPassword = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) =>
@@ -50,4 +71,11 @@ export const phoneOtpResetPassword = createServerFn({ method: 'POST' })
       })
       .parse(data),
   )
-  .handler(async ({ data }) => otpResetPassword(data.phone, data.code, data.password))
+  .handler(async ({ data }) => {
+    try {
+      await otpResetPassword(data.phone, data.code, data.password)
+      return { ok: true as const }
+    } catch (e) {
+      return { ok: false as const, error: e instanceof Error ? e.message : 'Password reset nahi hua' }
+    }
+  })
