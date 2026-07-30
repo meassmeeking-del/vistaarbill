@@ -434,6 +434,16 @@ export function AuthForm() {
               Jinka password set nahi hai woh OTP se login karke Settings →
               Account me password bana sakte hain.
             </p>
+            {rError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">
+                {rError}
+              </div>
+            )}
+            {rSent && !rError && (
+              <div className="rounded-md border border-primary/40 bg-primary/10 p-2 text-sm text-primary">
+                ✅ OTP bhej diya gaya {rPhone} par
+              </div>
+            )}
           </form>
         </TabsContent>
 
