@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Printer, Download, Loader2, Share2, Check, User, Phone } from "lucide-react";
+import { Printer, Download, Loader2, Share2, User, Phone } from "lucide-react";
 import { toast } from "sonner";
 
 type Props = {
@@ -200,50 +200,31 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-xl bg-gradient-to-b from-emerald-50 to-white p-3">
+        <div className="rounded-xl bg-muted p-3">
           <div
             ref={previewRef}
-            className="bg-white text-black font-mono text-xs mx-auto shadow-lg relative overflow-hidden"
+            className="bg-white text-black font-mono text-xs mx-auto shadow-lg relative overflow-hidden p-3"
             style={{ width: 280 }}
           >
-            {/* Zig-zag top edge */}
-            <div
-              className="h-2 bg-emerald-600"
-              style={{
-                WebkitMaskImage:
-                  "radial-gradient(circle at 6px 8px, transparent 4px, black 4.5px)",
-                WebkitMaskSize: "12px 8px",
-                WebkitMaskRepeat: "repeat-x",
-                maskImage:
-                  "radial-gradient(circle at 6px 8px, transparent 4px, black 4.5px)",
-                maskSize: "12px 8px",
-                maskRepeat: "repeat-x",
-              }}
-            />
-            <div className="bg-emerald-600 text-white text-center pb-3 pt-1">
-              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-emerald-600 shadow">
-                <Check className="h-6 w-6" strokeWidth={3} />
-              </div>
-            </div>
-            <div className="p-3">
+            <div>
               <div className="text-center">
                 <div className="font-bold text-base">{shop.name || "My Shop"}</div>
-                {shop.addressLine1 && <div className="text-[10px] text-gray-600">{shop.addressLine1}</div>}
-                {shop.addressLine2 && <div className="text-[10px] text-gray-600">{shop.addressLine2}</div>}
-                {shop.phoneNumber && <div className="text-[10px] text-gray-600">Ph: {shop.phoneNumber}</div>}
+                {shop.addressLine1 && <div>{shop.addressLine1}</div>}
+                {shop.addressLine2 && <div>{shop.addressLine2}</div>}
+                {shop.phoneNumber && <div>Ph: {shop.phoneNumber}</div>}
               </div>
-              <div className="border-t border-dashed border-gray-400 my-2" />
-              <div className="flex justify-between text-[10px] text-gray-600">
+              <div className="border-t border-dashed border-black my-2" />
+              <div className="flex justify-between text-[10px]">
                 <span>{new Date(sale.date).toLocaleString()}</span>
-                <span className="font-semibold">#{sale.id.slice(0, 6)}</span>
+                <span>#{sale.id.slice(0, 6)}</span>
               </div>
-              <div className="border-t border-dashed border-gray-400 my-2" />
+              <div className="border-t border-dashed border-black my-2" />
               <table className="w-full text-[11px]">
                 <thead>
-                  <tr className="text-gray-500">
-                    <th className="text-left font-semibold">Item</th>
-                    <th className="text-right font-semibold">Qty</th>
-                    <th className="text-right font-semibold">Total</th>
+                  <tr>
+                    <th className="text-left">Item</th>
+                    <th className="text-right">Qty</th>
+                    <th className="text-right">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -258,42 +239,26 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
                   ))}
                 </tbody>
               </table>
-              <div className="border-t border-dashed border-gray-400 my-2" />
+              <div className="border-t border-dashed border-black my-2" />
               <div className="flex justify-between text-[11px]">
-                <span className="text-gray-600">Subtotal</span>
+                <span>Subtotal</span>
                 <span>₹{sale.subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-[11px]">
-                <span className="text-gray-600">Tax</span>
+                <span>Tax</span>
                 <span>₹{sale.tax.toFixed(2)}</span>
               </div>
-              <div className="mt-2 flex justify-between items-center bg-emerald-600 text-white rounded-lg px-3 py-2">
-                <span className="font-bold text-sm">TOTAL</span>
-                <span className="font-bold text-base">₹{sale.total.toFixed(2)}</span>
+              <div className="flex justify-between font-bold text-[12px] mt-1">
+                <span>Total</span>
+                <span>₹{sale.total.toFixed(2)}</span>
               </div>
               {shop.upiId && (
-                <div className="text-center mt-2 text-[10px] text-gray-600">UPI: {shop.upiId}</div>
+                <div className="text-center mt-2 text-[10px]">UPI: {shop.upiId}</div>
               )}
-              <div className="text-center mt-2 text-[11px] font-semibold text-emerald-700">
+              <div className="text-center mt-3 text-[11px]">
                 {shop.footerText || "Thank you!"}
               </div>
             </div>
-            {/* Zig-zag bottom edge */}
-            <div
-              className="h-2 bg-white"
-              style={{
-                WebkitMaskImage:
-                  "radial-gradient(circle at 6px 0, transparent 4px, black 4.5px)",
-                WebkitMaskSize: "12px 8px",
-                WebkitMaskRepeat: "repeat-x",
-                maskImage:
-                  "radial-gradient(circle at 6px 0, transparent 4px, black 4.5px)",
-                maskSize: "12px 8px",
-                maskRepeat: "repeat-x",
-                background: "white",
-                boxShadow: "inset 0 0 0 1000px white",
-              }}
-            />
           </div>
         </div>
 
@@ -328,11 +293,7 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
               />
             </div>
           </div>
-          <Button
-            onClick={handleWhatsAppShare}
-            disabled={sharing}
-            className="w-full h-11 text-base font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
+          <Button onClick={handleWhatsAppShare} disabled={sharing} className="w-full h-11 text-base font-semibold">
             {sharing ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -347,7 +308,7 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
               type="checkbox"
               checked={feedback}
               onChange={(e) => setFeedback(e.target.checked)}
-              className="h-4 w-4 accent-emerald-600"
+              className="h-4 w-4"
             />
             Message me feedback request bhi bhejein
           </label>
