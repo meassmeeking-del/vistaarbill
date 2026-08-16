@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Printer, Download, Loader2, Share2, Check, User, Phone } from "lucide-react";
+import { Printer, Download, Loader2, Share2, User, Phone } from "lucide-react";
 import { toast } from "sonner";
 
 type Props = {
