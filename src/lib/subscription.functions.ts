@@ -3,6 +3,19 @@ import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware'
 
 type Plan = 'trial' | 'monthly'
 
+export type PlanRow = {
+  id: string
+  name: string
+  kind: string
+  price: number
+  days: number
+  description: string | null
+  badge: string | null
+  is_combo: boolean
+  active: boolean
+  sort_order: number
+}
+
 async function isAdmin(supabase: any, userId: string) {
   const { data } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' })
   return !!data
@@ -38,6 +51,11 @@ export const getMySubscription = createServerFn({ method: 'GET' })
       .select('*')
       .eq('id', true)
       .maybeSingle()
+    const { data: plans } = await supabase
+      .from('subscription_plans')
+      .select('*')
+      .eq('active', true)
+      .order('sort_order', { ascending: true })
     const admin = await isAdmin(supabase, userId)
     // Hardcoded admin email fallback — always bypass subscription gate
     const email = (context.claims as any)?.email as string | undefined
@@ -48,30 +66,132 @@ export const getMySubscription = createServerFn({ method: 'GET' })
       latest,
       activeRow,
       settings,
+      plans: (plans ?? []) as PlanRow[],
     }
+  })
+
+export const adminListPlans = createServerFn({ method: 'GET' })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context
+    if (!(await isAdmin(supabase, userId))) throw new Error('Forbidden')
+    const { data, error } = await supabase
+      .from('subscription_plans')
+      .select('*')
+      .order('sort_order', { ascending: true })
+    if (error) throw new Error(error.message)
+    return (data ?? []) as PlanRow[]
+  })
+
+export const savePlan = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: {
+    id?: string | null
+    name: string
+    kind: string
+    price: number
+    days: number
+    description?: string | null
+    badge?: string | null
+    is_combo?: boolean
+    active?: boolean
+    sort_order?: number
+  }) => {
+    const name = String(input?.name || '').trim()
+    if (!name) throw new Error('Plan ka naam daalein')
+    const kinds = ['trial', 'monthly', 'yearly', 'combo']
+    const kind = kinds.includes(input.kind) ? input.kind : 'monthly'
+    const price = Number(input.price)
+    const days = Number(input.days)
+    if (!(price >= 0)) throw new Error('Price sahi nahi hai')
+    if (!(days >= 1)) throw new Error('Days kam se kam 1 hone chahiye')
+    return {
+      id: input.id || null,
+      name,
+      kind,
+      price,
+      days,
+      description: input.description?.trim() || null,
+      badge: input.badge?.trim() || null,
+      is_combo: !!input.is_combo || kind === 'combo',
+      active: input.active ?? true,
+      sort_order: Number(input.sort_order ?? 0),
+    }
+  })
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context
+    if (!(await isAdmin(supabase, userId))) throw new Error('Forbidden')
+    const { id, ...fields } = data
+    if (id) {
+      const { error } = await supabase.from('subscription_plans').update(fields).eq('id', id)
+      if (error) throw new Error(error.message)
+      return { ok: true, id }
+    }
+    const { data: row, error } = await supabase
+      .from('subscription_plans')
+      .insert(fields)
+      .select('id')
+      .single()
+    if (error) throw new Error(error.message)
+    return { ok: true, id: row.id }
+  })
+
+export const deletePlan = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => {
+    if (!input?.id) throw new Error('id required')
+    return { id: input.id }
+  })
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context
+    if (!(await isAdmin(supabase, userId))) throw new Error('Forbidden')
+    const { error } = await supabase.from('subscription_plans').delete().eq('id', data.id)
+    if (error) throw new Error(error.message)
+    return { ok: true }
   })
 
 export const submitSubscriptionRequest = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { plan: Plan; utr: string; note?: string }) => {
-    if (!input || (input.plan !== 'trial' && input.plan !== 'monthly')) {
-      throw new Error('Invalid plan')
-    }
-    const utr = String(input.utr || '').trim()
+  .inputValidator((input: { plan_id?: string; plan?: Plan; utr: string; note?: string }) => {
+    const utr = String(input?.utr || '').trim()
     if (utr.length < 4) throw new Error('UTR/Reference number bahut chhota hai')
-    return { plan: input.plan, utr, note: input.note?.trim() || null }
+    if (!input?.plan_id && input?.plan !== 'trial' && input?.plan !== 'monthly') {
+      throw new Error('Plan choose karein')
+    }
+    return {
+      plan_id: input.plan_id || null,
+      plan: input.plan ?? null,
+      utr,
+      note: input.note?.trim() || null,
+    }
   })
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context
-    const { data: settings } = await supabase
-      .from('app_settings')
-      .select('trial_price, monthly_price')
-      .eq('id', true)
-      .maybeSingle()
-    const amount =
-      data.plan === 'trial'
-        ? Number(settings?.trial_price ?? 1)
-        : Number(settings?.monthly_price ?? 99)
+    let planRow: PlanRow | null = null
+    if (data.plan_id) {
+      const { data: p } = await supabase
+        .from('subscription_plans')
+        .select('*')
+        .eq('id', data.plan_id)
+        .maybeSingle()
+      planRow = (p as PlanRow) ?? null
+      if (!planRow) throw new Error('Plan nahi mila')
+    }
+    const isTrial = planRow ? planRow.kind === 'trial' : data.plan === 'trial'
+    let amount: number
+    let days: number
+    if (planRow) {
+      amount = Number(planRow.price)
+      days = Number(planRow.days)
+    } else {
+      const { data: settings } = await supabase
+        .from('app_settings')
+        .select('trial_price, monthly_price, trial_days, monthly_days')
+        .eq('id', true)
+        .maybeSingle()
+      amount = isTrial ? Number(settings?.trial_price ?? 1) : Number(settings?.monthly_price ?? 99)
+      days = isTrial ? Number(settings?.trial_days ?? 7) : Number(settings?.monthly_days ?? 30)
+    }
 
     // Block duplicate pending
     const { data: existing } = await supabase
@@ -85,7 +205,7 @@ export const submitSubscriptionRequest = createServerFn({ method: 'POST' })
     }
 
     // Block second trial
-    if (data.plan === 'trial') {
+    if (isTrial) {
       const { data: trialUsed } = await supabase
         .from('subscription_requests')
         .select('id')
@@ -94,7 +214,7 @@ export const submitSubscriptionRequest = createServerFn({ method: 'POST' })
         .in('status', ['approved', 'pending'])
         .limit(1)
       if (trialUsed && trialUsed.length) {
-        throw new Error('Trial pehle hi le chuke hain — ₹99 monthly plan chunein')
+        throw new Error('Trial pehle hi le chuke hain — paid plan chunein')
       }
     }
 
@@ -102,7 +222,10 @@ export const submitSubscriptionRequest = createServerFn({ method: 'POST' })
       .from('subscription_requests')
       .insert({
         user_id: userId,
-        plan: data.plan,
+        plan: isTrial ? 'trial' : 'monthly',
+        plan_id: planRow?.id ?? null,
+        plan_label: planRow?.name ?? (isTrial ? 'Trial' : 'Monthly'),
+        days,
         amount,
         utr: data.utr,
         note: data.note,
@@ -182,15 +305,18 @@ export const decideSubscriptionRequest = createServerFn({ method: 'POST' })
     }
 
     // Approve: compute expiry
-    const { data: settings } = await supabaseAdmin
-      .from('app_settings')
-      .select('trial_days, monthly_days')
-      .eq('id', true)
-      .maybeSingle()
-    const days =
-      row.plan === 'trial'
-        ? Number(settings?.trial_days ?? 7)
-        : Number(settings?.monthly_days ?? 30)
+    let days = Number((row as any).days ?? 0)
+    if (!days) {
+      const { data: settings } = await supabaseAdmin
+        .from('app_settings')
+        .select('trial_days, monthly_days')
+        .eq('id', true)
+        .maybeSingle()
+      days =
+        row.plan === 'trial'
+          ? Number(settings?.trial_days ?? 7)
+          : Number(settings?.monthly_days ?? 30)
+    }
     const expires = new Date()
     expires.setDate(expires.getDate() + days)
     const { error } = await supabaseAdmin
