@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, Smartphone, KeyRound } from "lucide-react";
+import { Loader2, ShieldCheck, Smartphone } from "lucide-react";
 import {
   sendPhoneOtp,
   confirmPhoneOtp,
   checkAccountExists,
-  phoneOtpLogin,
   phoneOtpResetPassword,
 } from "@/lib/otp.functions";
 
@@ -30,7 +29,7 @@ const signUpSchema = signInSchema.extend({
 });
 
 export function AuthForm() {
-  const [tab, setTab] = useState<"signin" | "signup" | "otp">("signin");
+  const [tab, setTab] = useState<"signin" | "signup" | "reset">("signin");
   const [loading, setLoading] = useState(false);
   const [banned, setBanned] = useState(false);
   const [email, setEmail] = useState("");
@@ -44,8 +43,6 @@ export function AuthForm() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
 
-  // OTP login / password reset tab
-  const [otpMode, setOtpMode] = useState<"login" | "reset">("login");
   const [rPhone, setRPhone] = useState("");
   const [rOtp, setROtp] = useState("");
   const [rPassword, setRPassword] = useState("");
@@ -64,10 +61,8 @@ export function AuthForm() {
       const taken = await checkAccountExists({ data: { phone } });
       if (taken.phoneTaken) {
         toast.error(
-          "Ye mobile number pehle se registered hai — OTP se login karein",
+          "Ye mobile number pehle se registered hai — sign in karein",
         );
-        setTab("otp");
-        setRPhone(phone);
         return;
       }
       const res = await sendPhoneOtp({ data: { phone } });
@@ -145,23 +140,6 @@ export function AuthForm() {
     }
     setRLoading(true);
     try {
-      if (otpMode === "login") {
-        const res = await phoneOtpLogin({
-          data: { phone: rPhone, code: rOtp },
-        });
-        if (!res.ok) {
-          setRError(res.error);
-          toast.error(res.error.includes("galat") ? "OTP wrong hai ❌" : res.error);
-          return;
-        }
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash: res.token_hash,
-          type: "magiclink",
-        });
-        if (error) throw new Error(error.message);
-        setRError(null);
-        toast.success("Login ho gaya ✅ Settings me jakar password set karein");
-      } else {
         if (rPassword.length < 6) {
           toast.error("Naya password kam se kam 6 character ka ho");
           return;
@@ -180,7 +158,6 @@ export function AuthForm() {
         setRSent(false);
         setROtp("");
         setRPassword("");
-      }
     } catch (err) {
       const m = err instanceof Error ? err.message : "OTP galat hai";
       toast.error(m.includes("galat") ? "OTP wrong hai ❌" : m);
