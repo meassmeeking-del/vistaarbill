@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, Smartphone, KeyRound } from "lucide-react";
+import { Loader2, ShieldCheck, Smartphone } from "lucide-react";
 import {
   sendPhoneOtp,
   confirmPhoneOtp,
   checkAccountExists,
-  phoneOtpLogin,
   phoneOtpResetPassword,
 } from "@/lib/otp.functions";
 
@@ -30,7 +29,7 @@ const signUpSchema = signInSchema.extend({
 });
 
 export function AuthForm() {
-  const [tab, setTab] = useState<"signin" | "signup" | "otp">("signin");
+  const [tab, setTab] = useState<"signin" | "signup" | "reset">("signin");
   const [loading, setLoading] = useState(false);
   const [banned, setBanned] = useState(false);
   const [email, setEmail] = useState("");
@@ -44,8 +43,6 @@ export function AuthForm() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState<string | null>(null);
 
-  // OTP login / password reset tab
-  const [otpMode, setOtpMode] = useState<"login" | "reset">("login");
   const [rPhone, setRPhone] = useState("");
   const [rOtp, setROtp] = useState("");
   const [rPassword, setRPassword] = useState("");
@@ -64,10 +61,8 @@ export function AuthForm() {
       const taken = await checkAccountExists({ data: { phone } });
       if (taken.phoneTaken) {
         toast.error(
-          "Ye mobile number pehle se registered hai — OTP se login karein",
+          "Ye mobile number pehle se registered hai — sign in karein",
         );
-        setTab("otp");
-        setRPhone(phone);
         return;
       }
       const res = await sendPhoneOtp({ data: { phone } });
@@ -145,23 +140,6 @@ export function AuthForm() {
     }
     setRLoading(true);
     try {
-      if (otpMode === "login") {
-        const res = await phoneOtpLogin({
-          data: { phone: rPhone, code: rOtp },
-        });
-        if (!res.ok) {
-          setRError(res.error);
-          toast.error(res.error.includes("galat") ? "OTP wrong hai ❌" : res.error);
-          return;
-        }
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash: res.token_hash,
-          type: "magiclink",
-        });
-        if (error) throw new Error(error.message);
-        setRError(null);
-        toast.success("Login ho gaya ✅ Settings me jakar password set karein");
-      } else {
         if (rPassword.length < 6) {
           toast.error("Naya password kam se kam 6 character ka ho");
           return;
@@ -180,7 +158,6 @@ export function AuthForm() {
         setRSent(false);
         setROtp("");
         setRPassword("");
-      }
     } catch (err) {
       const m = err instanceof Error ? err.message : "OTP galat hai";
       toast.error(m.includes("galat") ? "OTP wrong hai ❌" : m);
@@ -280,12 +257,11 @@ export function AuthForm() {
     <div className="rounded-lg border bg-card p-6 shadow-sm">
       <Tabs
         value={tab}
-        onValueChange={(v) => setTab(v as "signin" | "signup" | "otp")}
+        onValueChange={(v) => setTab(v as "signin" | "signup" | "reset")}
       >
-        <TabsList className="grid grid-cols-3 w-full">
+        <TabsList className="grid grid-cols-2 w-full">
           <TabsTrigger value="signin">Sign in</TabsTrigger>
           <TabsTrigger value="signup">Sign up</TabsTrigger>
-          <TabsTrigger value="otp">OTP login</TabsTrigger>
         </TabsList>
 
         <TabsContent value="signin">
@@ -336,8 +312,7 @@ export function AuthForm() {
             <button
               type="button"
               onClick={() => {
-                setOtpMode("reset");
-                setTab("otp");
+                setTab("reset");
               }}
               className="w-full text-sm text-muted-foreground underline"
             >
@@ -346,25 +321,9 @@ export function AuthForm() {
           </form>
         </TabsContent>
 
-        <TabsContent value="otp">
+        <TabsContent value="reset">
           <form onSubmit={onOtpSubmit} className="space-y-3 mt-4">
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant={otpMode === "login" ? "default" : "outline"}
-                onClick={() => setOtpMode("login")}
-              >
-                <Smartphone className="h-4 w-4 mr-2" /> OTP se login
-              </Button>
-              <Button
-                type="button"
-                variant={otpMode === "reset" ? "default" : "outline"}
-                onClick={() => setOtpMode("reset")}
-              >
-                <KeyRound className="h-4 w-4 mr-2" /> Password reset
-              </Button>
-            </div>
-
+            <div className="text-sm font-semibold">Password reset (OTP se)</div>
             <div className="space-y-1">
               <Label htmlFor="r-phone">Registered mobile number</Label>
               <div className="flex gap-2">
@@ -409,7 +368,6 @@ export function AuthForm() {
                     }
                   />
                 </div>
-                {otpMode === "reset" && (
                   <div className="space-y-1">
                     <Label htmlFor="r-pw">New password</Label>
                     <Input
@@ -421,18 +379,17 @@ export function AuthForm() {
                       onChange={(e) => setRPassword(e.target.value)}
                     />
                   </div>
-                )}
                 <Button type="submit" className="w-full" disabled={rLoading}>
                   {rLoading && (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   )}
-                  {otpMode === "login" ? "Login" : "Set new password"}
+                  Set new password
                 </Button>
               </>
             )}
             <p className="text-xs text-muted-foreground">
-              Jinka password set nahi hai woh OTP se login karke Settings →
-              Account me password bana sakte hain.
+              Registered mobile number par OTP aayega — verify karke naya
+              password set karein.
             </p>
             {rError && (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">

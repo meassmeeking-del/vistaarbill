@@ -401,6 +401,33 @@ function PaymentBlock({
         'VistaarBill subscription',
       )}`
     : ''
+  // Auto-generate a UPI QR for the exact plan amount
+  const [autoQr, setAutoQr] = useState('')
+  useEffect(() => {
+    let cancelled = false
+    if (!upiLink) {
+      setAutoQr('')
+      return
+    }
+    ;(async () => {
+      try {
+        const QRCode = (await import('qrcode')).default
+        const url = await QRCode.toDataURL(upiLink, {
+          width: 512,
+          margin: 1,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#111827', light: '#ffffff' },
+        })
+        if (!cancelled) setAutoQr(url)
+      } catch {
+        if (!cancelled) setAutoQr('')
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [upiLink])
+  const shownQr = autoQr || qr
   const [pickerOpen, setPickerOpen] = useState(false)
   const isMobile =
     typeof navigator !== 'undefined' &&
@@ -451,15 +478,22 @@ function PaymentBlock({
       <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
         Step 1 — Pay ₹{amount}
       </div>
-      {qr ? (
+      {shownQr ? (
+        <>
         <img
-          src={qr}
+          src={shownQr}
           alt="UPI QR"
           className="mx-auto h-44 w-44 rounded-xl border-4 border-white shadow-md bg-white object-contain"
         />
+        {autoQr && (
+          <div className="text-[11px] font-semibold text-violet-700">
+            ✨ Auto-generated QR — fixed ₹{amount}
+          </div>
+        )}
+        </>
       ) : (
         <div className="mx-auto h-44 w-44 rounded-xl border-4 border-white shadow-md bg-white/80 flex items-center justify-center text-xs text-muted-foreground p-4">
-          Admin abhi tak QR upload nahi kiya. UPI ID use karein 👇
+          Admin ne UPI ID set nahi ki — QR generate nahi ho paya
         </div>
       )}
       {upiId && (
@@ -477,7 +511,7 @@ function PaymentBlock({
         <button
           type="button"
           onClick={openPicker}
-          disabled={!upiLink && !qr}
+          disabled={!upiLink && !shownQr}
           className="group relative w-full h-14 rounded-2xl overflow-hidden font-extrabold text-white shadow-xl shadow-violet-500/40 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-transform"
         >
           {/* animated gradient background */}
