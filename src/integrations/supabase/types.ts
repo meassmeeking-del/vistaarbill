@@ -107,15 +107,63 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          active: boolean
+          badge: string | null
+          created_at: string
+          days: number
+          description: string | null
+          id: string
+          is_combo: boolean
+          kind: string
+          name: string
+          price: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          badge?: string | null
+          created_at?: string
+          days?: number
+          description?: string | null
+          id?: string
+          is_combo?: boolean
+          kind?: string
+          name: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          badge?: string | null
+          created_at?: string
+          days?: number
+          description?: string | null
+          id?: string
+          is_combo?: boolean
+          kind?: string
+          name?: string
+          price?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscription_requests: {
         Row: {
           amount: number
           approved_at: string | null
           created_at: string
+          days: number | null
           expires_at: string | null
           id: string
           note: string | null
           plan: Database["public"]["Enums"]["subscription_plan"]
+          plan_id: string | null
+          plan_label: string | null
           reject_reason: string | null
           status: Database["public"]["Enums"]["subscription_status"]
           updated_at: string
@@ -126,10 +174,13 @@ export type Database = {
           amount: number
           approved_at?: string | null
           created_at?: string
+          days?: number | null
           expires_at?: string | null
           id?: string
           note?: string | null
           plan: Database["public"]["Enums"]["subscription_plan"]
+          plan_id?: string | null
+          plan_label?: string | null
           reject_reason?: string | null
           status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
@@ -140,17 +191,28 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           created_at?: string
+          days?: number | null
           expires_at?: string | null
           id?: string
           note?: string | null
           plan?: Database["public"]["Enums"]["subscription_plan"]
+          plan_id?: string | null
+          plan_label?: string | null
           reject_reason?: string | null
           status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
           user_id?: string
           utr?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subscription_requests_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
