@@ -257,12 +257,11 @@ export function AuthForm() {
     <div className="rounded-lg border bg-card p-6 shadow-sm">
       <Tabs
         value={tab}
-        onValueChange={(v) => setTab(v as "signin" | "signup" | "otp")}
+        onValueChange={(v) => setTab(v as "signin" | "signup" | "reset")}
       >
-        <TabsList className="grid grid-cols-3 w-full">
+        <TabsList className="grid grid-cols-2 w-full">
           <TabsTrigger value="signin">Sign in</TabsTrigger>
           <TabsTrigger value="signup">Sign up</TabsTrigger>
-          <TabsTrigger value="otp">OTP login</TabsTrigger>
         </TabsList>
 
         <TabsContent value="signin">
@@ -313,8 +312,7 @@ export function AuthForm() {
             <button
               type="button"
               onClick={() => {
-                setOtpMode("reset");
-                setTab("otp");
+                setTab("reset");
               }}
               className="w-full text-sm text-muted-foreground underline"
             >
@@ -323,25 +321,9 @@ export function AuthForm() {
           </form>
         </TabsContent>
 
-        <TabsContent value="otp">
+        <TabsContent value="reset">
           <form onSubmit={onOtpSubmit} className="space-y-3 mt-4">
-            <div className="grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant={otpMode === "login" ? "default" : "outline"}
-                onClick={() => setOtpMode("login")}
-              >
-                <Smartphone className="h-4 w-4 mr-2" /> OTP se login
-              </Button>
-              <Button
-                type="button"
-                variant={otpMode === "reset" ? "default" : "outline"}
-                onClick={() => setOtpMode("reset")}
-              >
-                <KeyRound className="h-4 w-4 mr-2" /> Password reset
-              </Button>
-            </div>
-
+            <div className="text-sm font-semibold">Password reset (OTP se)</div>
             <div className="space-y-1">
               <Label htmlFor="r-phone">Registered mobile number</Label>
               <div className="flex gap-2">
@@ -386,7 +368,6 @@ export function AuthForm() {
                     }
                   />
                 </div>
-                {otpMode === "reset" && (
                   <div className="space-y-1">
                     <Label htmlFor="r-pw">New password</Label>
                     <Input
@@ -398,18 +379,17 @@ export function AuthForm() {
                       onChange={(e) => setRPassword(e.target.value)}
                     />
                   </div>
-                )}
                 <Button type="submit" className="w-full" disabled={rLoading}>
                   {rLoading && (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   )}
-                  {otpMode === "login" ? "Login" : "Set new password"}
+                  Set new password
                 </Button>
               </>
             )}
             <p className="text-xs text-muted-foreground">
-              Jinka password set nahi hai woh OTP se login karke Settings →
-              Account me password bana sakte hain.
+              Registered mobile number par OTP aayega — verify karke naya
+              password set karein.
             </p>
             {rError && (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-sm text-destructive">
