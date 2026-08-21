@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export type Product = {
   id: string;
@@ -114,7 +114,10 @@ export function useProducts() {
 
 export function useShop() {
   const [shop, setShop] = useStored<Shop>(SHOP_KEY, defaultShop);
-  return { shop: { ...defaultShop, ...shop }, setShop };
+  // Memoized so the returned object is referentially stable between renders
+  // (an unstable object caused effects depending on `shop` to loop forever).
+  const merged = useMemo(() => ({ ...defaultShop, ...shop }), [shop]);
+  return { shop: merged, setShop };
 }
 
 export function useSales() {
