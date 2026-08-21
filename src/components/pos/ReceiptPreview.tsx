@@ -203,64 +203,13 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
         <div className="rounded-xl bg-muted p-3">
           <div
             ref={previewRef}
-            className="bg-white text-black font-mono text-xs mx-auto shadow-lg relative overflow-hidden p-3"
-            style={{ width: 280 }}
+            className="bg-white text-black mx-auto shadow-lg relative overflow-hidden"
+            style={{ width: 260, fontFamily: "ui-monospace, monospace", padding: 10 }}
           >
-            <div>
-              <div className="text-center">
-                <div className="font-bold text-base">{shop.name || "My Shop"}</div>
-                {shop.addressLine1 && <div>{shop.addressLine1}</div>}
-                {shop.addressLine2 && <div>{shop.addressLine2}</div>}
-                {shop.phoneNumber && <div>Ph: {shop.phoneNumber}</div>}
-              </div>
-              <div className="border-t border-dashed border-black my-2" />
-              <div className="flex justify-between text-[10px]">
-                <span>{new Date(sale.date).toLocaleString()}</span>
-                <span>#{sale.id.slice(0, 6)}</span>
-              </div>
-              <div className="border-t border-dashed border-black my-2" />
-              <table className="w-full text-[11px]">
-                <thead>
-                  <tr>
-                    <th className="text-left">Item</th>
-                    <th className="text-right">Qty</th>
-                    <th className="text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sale.items.map((c) => (
-                    <tr key={c.product.id}>
-                      <td className="text-left py-0.5">{c.product.name}</td>
-                      <td className="text-right">{c.quantity}</td>
-                      <td className="text-right">
-                        ₹{(c.product.price * c.quantity).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="border-t border-dashed border-black my-2" />
-              <div className="flex justify-between text-[11px]">
-                <span>Subtotal</span>
-                <span>₹{sale.subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span>Tax</span>
-                <span>₹{sale.tax.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between font-bold text-[12px] mt-1">
-                <span>Total</span>
-                <span>₹{sale.total.toFixed(2)}</span>
-              </div>
-              {shop.upiId && (
-                <div className="text-center mt-2 text-[10px]">UPI: {shop.upiId}</div>
-              )}
-              <div className="text-center mt-3 text-[11px]">
-                {shop.footerText || "Thank you!"}
-              </div>
-            </div>
+            <ReceiptBody sale={sale} shop={shop} />
           </div>
         </div>
+
 
         <div className="space-y-2 pt-2">
           <div className="grid gap-2">
