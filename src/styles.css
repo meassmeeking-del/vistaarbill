@@ -157,3 +157,29 @@
     color: var(--color-foreground);
   }
 }
+
+/* ---- Thermal receipt printer (58mm / 80mm roll) ---- */
+@media print {
+  @page {
+    size: 58mm auto;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .thermal-receipt {
+    width: 54mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 1mm 8mm !important;
+    color: #000 !important;
+    background: #fff !important;
+    font-family: ui-monospace, "Courier New", monospace !important;
+    font-size: 10.5px !important;
+    line-height: 1.35 !important;
+  }
+}

@@ -24,6 +24,8 @@ export type Shop = {
   smsDefaultNumber: string;
 };
 
+export type PaymentMode = "cash" | "online";
+
 export type Sale = {
   id: string;
   date: string;
@@ -33,7 +35,11 @@ export type Sale = {
   total: number;
   customerName?: string;
   customerPhone?: string;
+  paymentMode?: PaymentMode;
+  /** UPI QR (data URL) generated for this bill's exact amount — online only */
+  qrDataUrl?: string;
 };
+
 
 const PRODUCTS_KEY = "pos.products";
 const SHOP_KEY = "pos.shop";

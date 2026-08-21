@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useProducts, useShop, useSales, type CartItem, type Sale } from "@/lib/pos-store";
+import { useProducts, useShop, useSales, type CartItem, type Sale, type PaymentMode } from "@/lib/pos-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Minus, Plus, Trash2, Receipt, ScanLine, MessageSquare, Loader2 } from "lucide-react";
+import { Minus, Plus, Trash2, Receipt, ScanLine, MessageSquare, Loader2, Banknote, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { Receipt as ReceiptView } from "./Receipt";
 import { BarcodeScanner } from "./BarcodeScanner";
@@ -30,6 +30,7 @@ export function Checkout() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [custPhone, setCustPhone] = useState("");
   const [smsSending, setSmsSending] = useState(false);
+  const [payMode, setPayMode] = useState<PaymentMode>("cash");
   const [quickAdd, setQuickAdd] = useState<{
     open: boolean;
     barcode: string;
@@ -163,11 +164,32 @@ export function Checkout() {
     setQuickAdd({ open: false, barcode: "", name: "", price: "", saveToCatalog: true });
   };
 
-  const finalizeSale = () => {
+  const buildUpiQr = async (amount: number) => {
+    const upi = (shop.upiId || "").trim();
+    if (!upi) return undefined;
+    const link =
+      `upi://pay?pa=${encodeURIComponent(upi)}` +
+      `&pn=${encodeURIComponent(shop.name || "Shop")}` +
+      `&am=${amount.toFixed(2)}&cu=INR` +
+      `&tn=${encodeURIComponent("Bill payment")}`;
+    try {
+      const QR = await import("qrcode");
+      return await QR.toDataURL(link, { margin: 1, width: 320 });
+    } catch {
+      return undefined;
+    }
+  };
+
+  const finalizeSale = async () => {
     if (cart.length === 0) {
       toast.error("Cart is empty");
       return;
     }
+    if (payMode === "online" && !shop.upiId?.trim()) {
+      toast.error("Pehle Settings me UPI ID bharein — QR ke liye zaroori hai");
+      return;
+    }
+    const qrDataUrl = payMode === "online" ? await buildUpiQr(total) : undefined;
     const sale: Sale = {
       id: crypto.randomUUID(),
       date: new Date().toISOString(),
@@ -176,6 +198,8 @@ export function Checkout() {
       tax,
       total,
       customerPhone: custPhone.trim() || undefined,
+      paymentMode: payMode,
+      qrDataUrl,
     };
     addSale(sale);
     cart.forEach((c) =>
@@ -186,7 +210,7 @@ export function Checkout() {
     setLastSale(sale);
     setCart([]);
     setPreviewOpen(true);
-    toast.success("Sale recorded");
+    toast.success(payMode === "online" ? "Bill ready — QR bill par print hoga" : "Sale recorded (Cash)");
     const target = custPhone.trim() || shop.smsDefaultNumber?.trim() || "";
     if (shop.smsEnabled && target) void sendSmsFor(sale, target);
   };
@@ -318,6 +342,34 @@ export function Checkout() {
               onChange={(e) => setCustPhone(e.target.value)}
             />
           </div>
+          <div className="border-t pt-3">
+            <Label className="text-xs">Payment</Label>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={payMode === "cash" ? "default" : "outline"}
+                className="h-10"
+                onClick={() => setPayMode("cash")}
+              >
+                <Banknote className="h-4 w-4 mr-1.5" /> Cash
+              </Button>
+              <Button
+                type="button"
+                variant={payMode === "online" ? "default" : "outline"}
+                className="h-10"
+                onClick={() => setPayMode("online")}
+              >
+                <QrCode className="h-4 w-4 mr-1.5" /> Online
+              </Button>
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {payMode === "online"
+                ? shop.upiId
+                  ? `QR auto-generate hoga · ₹${total.toFixed(2)} fixed · bill par print`
+                  : "Settings me UPI ID bharein warna QR nahi banega"
+                : "Cash bill — QR print nahi hoga"}
+            </p>
+          </div>
           <div className="space-y-1 text-sm border-t pt-3">
             <div className="flex justify-between text-muted-foreground">
               <span>Subtotal</span>
@@ -334,7 +386,7 @@ export function Checkout() {
           </div>
           <Button
             className="w-full h-11 text-base font-semibold text-primary-foreground hover:opacity-90 transition-opacity"
-            onClick={finalizeSale}
+            onClick={() => void finalizeSale()}
             style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-elegant)" }}
           >
             <Receipt className="mr-2 h-4 w-4" /> Checkout · ₹{total.toFixed(2)}
