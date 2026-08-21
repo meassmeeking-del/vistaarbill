@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Receipt as ReceiptView } from "./Receipt";
+import { Receipt as ReceiptView, ReceiptBody } from "./Receipt";
 import type { Sale, Shop } from "@/lib/pos-store";
 import { useSales } from "@/lib/pos-store";
 import {
