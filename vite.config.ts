@@ -6,4 +6,10 @@
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-export default defineConfig();
+// On Netlify CI (NETLIFY=true) we build with Nitro's `netlify` preset.
+// Everywhere else (Lovable preview/publish) the default Cloudflare build is kept.
+const isNetlify = process.env["NETLIFY"] === "true" || process.env["NETLIFY"] === "1";
+
+export default defineConfig(
+  isNetlify ? { nitro: { preset: "netlify" } } : {},
+);

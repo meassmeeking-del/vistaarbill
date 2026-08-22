@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Nitro's `netlify` preset (see vite.config.ts) emits the SSR handler into
+# .netlify/functions-internal and the static assets into dist, so no manual
+# redirects or functions config is needed here.
