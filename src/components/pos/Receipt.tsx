@@ -133,6 +133,14 @@ export function ReceiptBody({ sale, shop }: { sale: Sale; shop: Shop }) {
         <span>Rs {sale.total.toFixed(2)}</span>
       </div>
       <div className="border-t border-black my-1" />
+      {saved > 0 && (
+        <div className="text-center text-[10px] font-bold">
+          YOU SAVED Rs {saved.toFixed(2)}
+        </div>
+      )}
+      <div className="text-[9px] mt-1">
+        In words: {amountInWords(sale.total)}
+      </div>
 
       {online && sale.qrDataUrl && (
         <div className="text-center mt-1">
@@ -147,16 +155,39 @@ export function ReceiptBody({ sale, shop }: { sale: Sale; shop: Shop }) {
         </div>
       )}
 
-      {!online && shop.upiId && (
+      {!online && (
         <div className="text-center text-[9px] mt-1">Paid by CASH</div>
       )}
+
+      <div className="border-t border-dashed border-black my-1" />
+      <div className="text-center mt-1">
+        <BarBars value={sale.id.slice(0, 10)} />
+        <div className="text-[8px] tracking-[2px] mt-[2px]">
+          {sale.id.slice(0, 12).toUpperCase()}
+        </div>
+      </div>
+
+      <div className="text-center text-[10px] mt-2 leading-snug">
+        <div className="font-bold text-[11px]">HOW DID WE DO?</div>
+        <div className="text-[9px]">
+          {shop.phoneNumber
+            ? `WhatsApp / Call: ${shop.phoneNumber}`
+            : "Apni raay dukaan par batayein"}
+        </div>
+      </div>
+
+      <div className="text-[9px] mt-2">
+        <div>Customer Signature: ____________</div>
+      </div>
 
       <div className="text-center text-[10px] mt-2 leading-snug">
         <div>{shop.footerText || "Dhanyavaad! Phir aayein 🙏"}</div>
         <div className="text-[9px]">Bill sambhal kar rakhein</div>
         <div className="text-[9px]">Exchange 7 din ke andar bill ke saath</div>
+        <div className="text-[9px]">Goods once sold ki guarantee dukaan ke niyam ke anusaar</div>
         <div className="text-[9px] mt-1">-- VistaarBill --</div>
       </div>
+
     </div>
   );
 }
