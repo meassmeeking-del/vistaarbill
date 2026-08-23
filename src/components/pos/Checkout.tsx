@@ -21,7 +21,7 @@ import { sendBillSms } from "@/lib/sms.functions";
 export function Checkout() {
   const { products, updateProduct, addProduct } = useProducts();
   const { shop } = useShop();
-  const { addSale } = useSales();
+  const { sales, addSale } = useSales();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [search, setSearch] = useState("");
   const [taxPct, setTaxPct] = useState("0");
@@ -115,6 +115,13 @@ export function Checkout() {
     if (e.key !== "Enter") return;
     const q = search.trim();
     if (!q) return;
+    const bill = findSaleByCode(q);
+    if (bill && (/^VBILL:/i.test(q) || q.length >= 6)) {
+      setLastSale(bill);
+      setPreviewOpen(true);
+      setSearch("");
+      return;
+    }
     const match =
       products.find((p) => p.barcode === q) ||
       products.find((p) => p.name.toLowerCase() === q.toLowerCase());
@@ -126,7 +133,30 @@ export function Checkout() {
     }
   };
 
+  /** Bill code se history wala bill wapas kholna */
+  const findSaleByCode = (raw: string) => {
+    const code = raw.trim().replace(/^VBILL:/i, "").toUpperCase();
+    if (!code) return undefined;
+    return sales.find(
+      (s) =>
+        s.id.toUpperCase() === code ||
+        s.id.replace(/-/g, "").toUpperCase().startsWith(code.replace(/-/g, "")),
+    );
+  };
+
   const handleScanned = (code: string) => {
+    const bill = /^VBILL:/i.test(code.trim()) ? findSaleByCode(code) : undefined;
+    if (bill) {
+      setLastSale(bill);
+      setPreviewOpen(true);
+      setScannerOpen(false);
+      toast.success(`Bill #${bill.id.slice(0, 6).toUpperCase()} khul gaya`);
+      return;
+    }
+    if (/^VBILL:/i.test(code.trim())) {
+      toast.error("Ye bill history me nahi mila");
+      return;
+    }
     const match = products.find((p) => p.barcode === code);
     if (match) {
       addToCart(match.id);
