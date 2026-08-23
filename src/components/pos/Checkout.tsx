@@ -116,7 +116,7 @@ export function Checkout() {
     const q = search.trim();
     if (!q) return;
     const bill = findSaleByCode(q);
-    if (bill && (/^VBILL:/i.test(q) || q.length >= 6)) {
+    if (bill) {
       setLastSale(bill);
       setPreviewOpen(true);
       setSearch("");
