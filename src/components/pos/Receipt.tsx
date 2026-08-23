@@ -29,30 +29,34 @@ function amountInWords(n: number): string {
   return `${parts.join(" ")} Rupees${paise ? " and " + two(paise) + " Paise" : ""} Only`;
 }
 
-/** Simple CSS "barcode" derived from the bill id — no extra dependency */
-function BarBars({ value }: { value: string }) {
-  const seed = value.toUpperCase();
-  const bars: number[] = [];
-  for (let i = 0; i < seed.length; i++) {
-    const c = seed.charCodeAt(i);
-    bars.push((c % 3) + 1, ((c >> 2) % 3) + 1, ((c >> 4) % 2) + 1);
-  }
+/** Scannable bill QR — encodes VBILL:<id> so the app scanner can re-open the bill */
+function BillCode({ id }: { id: string }) {
+  const [src, setSrc] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const QR = await import("qrcode");
+        const url = await QR.toDataURL(`VBILL:${id}`, { margin: 0, width: 200 });
+        if (alive) setSrc(url);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+  if (!src) return null;
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 1, height: 30, justifyContent: "center" }}>
-      {bars.map((w, i) => (
-        <span
-          key={i}
-          style={{
-            width: w,
-            height: "100%",
-            background: i % 2 === 0 ? "#000" : "transparent",
-            display: "inline-block",
-          }}
-        />
-      ))}
-    </div>
+    <img
+      src={src}
+      alt="Bill code"
+      style={{ width: 84, height: 84, margin: "2px auto", display: "block" }}
+    />
   );
 }
+
 
 /**
  * Thermal (58mm) grocery bill body — shared by the on-screen preview
