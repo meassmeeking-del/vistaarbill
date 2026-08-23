@@ -490,9 +490,37 @@ function PaymentBlock({
           alt="UPI QR"
           className="mx-auto h-44 w-44 rounded-xl border-4 border-white shadow-md bg-white object-contain"
         />
-        {autoQr && (
-          <div className="text-[11px] font-semibold text-violet-700">
-            ✨ Auto-generated QR — fixed ₹{amount}
+        {qrMode === 'admin' && qr ? (
+          <div className="text-[11px] font-semibold text-emerald-700">
+            🏦 Admin ka QR — ₹{amount} manually daalein
+          </div>
+        ) : (
+          autoQr && (
+            <div className="text-[11px] font-semibold text-violet-700">
+              ✨ Auto-generated QR — fixed ₹{amount}
+            </div>
+          )
+        )}
+        {qr && autoQr && (
+          <div className="inline-flex rounded-full border bg-white p-0.5 text-[11px] font-semibold">
+            <button
+              type="button"
+              onClick={() => setQrMode('admin')}
+              className={`px-3 py-1 rounded-full transition-colors ${
+                qrMode === 'admin' ? 'bg-violet-600 text-white' : 'text-violet-700'
+              }`}
+            >
+              Admin QR
+            </button>
+            <button
+              type="button"
+              onClick={() => setQrMode('auto')}
+              className={`px-3 py-1 rounded-full transition-colors ${
+                qrMode === 'auto' ? 'bg-violet-600 text-white' : 'text-violet-700'
+              }`}
+            >
+              Auto QR (₹{amount})
+            </button>
           </div>
         )}
         </>
