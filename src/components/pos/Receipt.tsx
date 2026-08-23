@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { Sale, Shop } from "@/lib/pos-store";
 
 /** Rupees -> Indian words (for the "Amount in words" line on the bill) */
@@ -165,7 +166,8 @@ export function ReceiptBody({ sale, shop }: { sale: Sale; shop: Shop }) {
 
       <div className="border-t border-dashed border-black my-1" />
       <div className="text-center mt-1">
-        <BarBars value={sale.id.slice(0, 10)} />
+        <BillCode id={sale.id} />
+        <div className="text-[8px]">Scan karein — bill app me khul jayega</div>
         <div className="text-[8px] tracking-[2px] mt-[2px]">
           {sale.id.slice(0, 12).toUpperCase()}
         </div>
