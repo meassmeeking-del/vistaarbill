@@ -427,7 +427,12 @@ function PaymentBlock({
       cancelled = true
     }
   }, [upiLink])
-  const shownQr = autoQr || qr
+  // Old method = admin ka uploaded QR image. Default: uploaded QR (agar hai), warna auto.
+  const [qrMode, setQrMode] = useState<'admin' | 'auto'>(qr ? 'admin' : 'auto')
+  useEffect(() => {
+    setQrMode(qr ? 'admin' : 'auto')
+  }, [qr])
+  const shownQr = qrMode === 'admin' && qr ? qr : autoQr || qr
   const [pickerOpen, setPickerOpen] = useState(false)
   const isMobile =
     typeof navigator !== 'undefined' &&
