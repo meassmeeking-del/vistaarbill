@@ -135,17 +135,20 @@ export function Checkout() {
 
   /** Bill code se history wala bill wapas kholna */
   const findSaleByCode = (raw: string) => {
-    const code = raw.trim().replace(/^VBILL:/i, "").toUpperCase();
+    const trimmed = raw.trim();
+    const hasPrefix = /^VBILL:/i.test(trimmed);
+    const code = trimmed.replace(/^VBILL:/i, "").replace(/-/g, "").toUpperCase();
     if (!code) return undefined;
-    return sales.find(
-      (s) =>
-        s.id.toUpperCase() === code ||
-        s.id.replace(/-/g, "").toUpperCase().startsWith(code.replace(/-/g, "")),
-    );
+    // Bina prefix wale codes ke liye thoda strict — warna normal product barcode bhi match ho jaye
+    if (!hasPrefix && code.length < 6) return undefined;
+    return sales.find((s) => {
+      const id = s.id.replace(/-/g, "").toUpperCase();
+      return id === code || id.startsWith(code);
+    });
   };
 
   const handleScanned = (code: string) => {
-    const bill = /^VBILL:/i.test(code.trim()) ? findSaleByCode(code) : undefined;
+    const bill = findSaleByCode(code);
     if (bill) {
       setLastSale(bill);
       setPreviewOpen(true);
