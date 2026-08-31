@@ -487,6 +487,13 @@ export function Checkout() {
         onOpenChange={setScannerOpen}
         onDetected={handleScanned}
       />
+      <BarcodeScanner
+        open={billScannerOpen}
+        onOpenChange={setBillScannerOpen}
+        onDetected={handleBillScanned}
+        title="Scan Bill"
+        hint="Bill par VistaarBill ka QR code scan karein — purana bill wapas khul jayega."
+      />
       <Dialog
         open={quickAdd.open}
         onOpenChange={(o) => setQuickAdd((q) => ({ ...q, open: o }))}
