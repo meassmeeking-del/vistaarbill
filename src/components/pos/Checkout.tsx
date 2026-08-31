@@ -278,11 +278,19 @@ export function Checkout() {
             />
             <Button
               onClick={() => setScannerOpen(true)}
+              variant="outline"
               className="h-10"
-              style={{ background: "var(--gradient-primary)" }}
             >
               <ScanLine className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Scan</span>
+            </Button>
+            <Button
+              onClick={() => setBillScannerOpen(true)}
+              className="h-10"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              <FileSearch className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Scan Bill</span>
             </Button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
