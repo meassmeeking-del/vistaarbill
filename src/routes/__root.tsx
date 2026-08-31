@@ -45,6 +45,7 @@ export const Route = createRootRoute({
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { name: "apple-mobile-web-app-title", content: "VistaarBill" },
       { name: "google-site-verification", content: "t02Kchy_UfUS66nSXlDyh8bIWouxYYLjQPwsn76UEL0" },
+      { name: "google-site-verification", content: "ES9Lvj474A6Gje_2A75boHoJPSD2WcQD5nyi9W5f3hw" },
     ],
     links: [
       {
