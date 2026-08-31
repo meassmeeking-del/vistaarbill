@@ -15,9 +15,19 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDetected: (code: string) => void;
+  /** Title shown in the scanner dialog header */
+  title?: string;
+  /** Hint text shown below the camera view */
+  hint?: string;
 };
 
-export function BarcodeScanner({ open, onOpenChange, onDetected }: Props) {
+export function BarcodeScanner({
+  open,
+  onOpenChange,
+  onDetected,
+  title = "Scan Barcode",
+  hint = "Barcode ko frame ke beech laayein. Andhera ho toh flash on karein.",
+}: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -148,7 +158,7 @@ export function BarcodeScanner({ open, onOpenChange, onDetected }: Props) {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ScanLine className="h-5 w-5" /> Scan Barcode
+            <ScanLine className="h-5 w-5" /> {title}
           </DialogTitle>
         </DialogHeader>
         {error ? (
@@ -188,9 +198,7 @@ export function BarcodeScanner({ open, onOpenChange, onDetected }: Props) {
                 ))}
               </select>
             )}
-            <p className="text-xs text-muted-foreground text-center">
-              Barcode ko frame ke beech laayein. Andhera ho toh flash on karein.
-            </p>
+            <p className="text-xs text-muted-foreground text-center">{hint}</p>
             {lastCode && (
               <p className="text-xs text-center">Last: {lastCode}</p>
             )}

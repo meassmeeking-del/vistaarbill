@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Minus, Plus, Trash2, Receipt, ScanLine, MessageSquare, Loader2, Banknote, QrCode } from "lucide-react";
+import { Minus, Plus, Trash2, Receipt, ScanLine, MessageSquare, Loader2, Banknote, QrCode, FileSearch } from "lucide-react";
 import { toast } from "sonner";
 import { Receipt as ReceiptView } from "./Receipt";
 import { BarcodeScanner } from "./BarcodeScanner";
@@ -27,6 +27,7 @@ export function Checkout() {
   const [taxPct, setTaxPct] = useState("0");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [billScannerOpen, setBillScannerOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [custPhone, setCustPhone] = useState("");
   const [smsSending, setSmsSending] = useState(false);
@@ -175,6 +176,19 @@ export function Checkout() {
     }
   };
 
+  /** Bill-scan mode: sirf bill kholega, product flow nahi chalega */
+  const handleBillScanned = (code: string) => {
+    const bill = findSaleByCode(code);
+    if (bill) {
+      setLastSale(bill);
+      setPreviewOpen(true);
+      setBillScannerOpen(false);
+      toast.success(`Bill #${bill.id.slice(0, 6).toUpperCase()} khul gaya`);
+      return;
+    }
+    toast.error("Ye bill history me nahi mila — sirf VistaarBill wale QR scan karein");
+  };
+
   const confirmQuickAdd = () => {
     const price = parseFloat(quickAdd.price);
     if (!price || price <= 0) {
@@ -264,11 +278,19 @@ export function Checkout() {
             />
             <Button
               onClick={() => setScannerOpen(true)}
+              variant="outline"
               className="h-10"
-              style={{ background: "var(--gradient-primary)" }}
             >
               <ScanLine className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">Scan</span>
+            </Button>
+            <Button
+              onClick={() => setBillScannerOpen(true)}
+              className="h-10"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              <FileSearch className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Scan Bill</span>
             </Button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -464,6 +486,13 @@ export function Checkout() {
         open={scannerOpen}
         onOpenChange={setScannerOpen}
         onDetected={handleScanned}
+      />
+      <BarcodeScanner
+        open={billScannerOpen}
+        onOpenChange={setBillScannerOpen}
+        onDetected={handleBillScanned}
+        title="Scan Bill"
+        hint="Bill par VistaarBill ka QR code scan karein — purana bill wapas khul jayega."
       />
       <Dialog
         open={quickAdd.open}
