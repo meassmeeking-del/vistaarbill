@@ -176,6 +176,19 @@ export function Checkout() {
     }
   };
 
+  /** Bill-scan mode: sirf bill kholega, product flow nahi chalega */
+  const handleBillScanned = (code: string) => {
+    const bill = findSaleByCode(code);
+    if (bill) {
+      setLastSale(bill);
+      setPreviewOpen(true);
+      setBillScannerOpen(false);
+      toast.success(`Bill #${bill.id.slice(0, 6).toUpperCase()} khul gaya`);
+      return;
+    }
+    toast.error("Ye bill history me nahi mila — sirf VistaarBill wale QR scan karein");
+  };
+
   const confirmQuickAdd = () => {
     const price = parseFloat(quickAdd.price);
     if (!price || price <= 0) {
