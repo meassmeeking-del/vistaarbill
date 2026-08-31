@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Minus, Plus, Trash2, Receipt, ScanLine, MessageSquare, Loader2, Banknote, QrCode } from "lucide-react";
+import { Minus, Plus, Trash2, Receipt, ScanLine, MessageSquare, Loader2, Banknote, QrCode, FileSearch } from "lucide-react";
 import { toast } from "sonner";
 import { Receipt as ReceiptView } from "./Receipt";
 import { BarcodeScanner } from "./BarcodeScanner";
@@ -27,6 +27,7 @@ export function Checkout() {
   const [taxPct, setTaxPct] = useState("0");
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [billScannerOpen, setBillScannerOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [custPhone, setCustPhone] = useState("");
   const [smsSending, setSmsSending] = useState(false);
