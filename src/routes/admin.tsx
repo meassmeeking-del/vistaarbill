@@ -29,8 +29,27 @@ import { AdminSubscriptions } from '@/components/pos/AdminSubscriptions'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export const Route = createFileRoute('/admin')({
+  head: () => ({
+    meta: [
+      { title: 'Admin Panel — VistaarBill' },
+      {
+        name: 'description',
+        content:
+          'Private VistaarBill admin panel for managing shop users, plans and subscription requests.',
+      },
+      { name: 'robots', content: 'noindex, nofollow' },
+      { property: 'og:title', content: 'Admin Panel — VistaarBill' },
+      {
+        property: 'og:description',
+        content: 'Private VistaarBill admin panel for users and subscriptions.',
+      },
+      { property: 'og:type', content: 'website' },
+      { name: 'twitter:card', content: 'summary' },
+    ],
+  }),
   component: AdminPage,
 })
+
 
 function AdminPage() {
   const navigate = useNavigate()
