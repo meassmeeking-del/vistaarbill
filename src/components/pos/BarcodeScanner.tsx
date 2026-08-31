@@ -15,9 +15,19 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDetected: (code: string) => void;
+  /** Title shown in the scanner dialog header */
+  title?: string;
+  /** Hint text shown below the camera view */
+  hint?: string;
 };
 
-export function BarcodeScanner({ open, onOpenChange, onDetected }: Props) {
+export function BarcodeScanner({
+  open,
+  onOpenChange,
+  onDetected,
+  title = "Scan Barcode",
+  hint = "Barcode ko frame ke beech laayein. Andhera ho toh flash on karein.",
+}: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
