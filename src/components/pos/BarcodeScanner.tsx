@@ -158,7 +158,7 @@ export function BarcodeScanner({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ScanLine className="h-5 w-5" /> Scan Barcode
+            <ScanLine className="h-5 w-5" /> {title}
           </DialogTitle>
         </DialogHeader>
         {error ? (
@@ -198,9 +198,7 @@ export function BarcodeScanner({
                 ))}
               </select>
             )}
-            <p className="text-xs text-muted-foreground text-center">
-              Barcode ko frame ke beech laayein. Andhera ho toh flash on karein.
-            </p>
+            <p className="text-xs text-muted-foreground text-center">{hint}</p>
             {lastCode && (
               <p className="text-xs text-center">Last: {lastCode}</p>
             )}
