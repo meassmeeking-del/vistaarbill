@@ -80,6 +80,7 @@ let syncStarted = false;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let saveInFlight = false;
 let saveQueued = false;
+let syncChannel: ReturnType<typeof supabase.channel> | null = null;
 
 const localSnapshot = (): PosSnapshot => ({
   products: read(PRODUCTS_KEY, seedProducts),
@@ -204,8 +205,28 @@ const startAccountSync = () => {
     if (event === "SIGNED_OUT") {
       activeUserId = null;
       lastSyncedAt = 0;
+      if (syncChannel) {
+        void supabase.removeChannel(syncChannel);
+        syncChannel = null;
+      }
       clearLocalSnapshot();
     }
+  });
+  void supabase.auth.getUser().then(({ data }) => {
+    if (!data.user || syncChannel) return;
+    syncChannel = supabase
+      .channel(`pos-data-${data.user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "pos_data",
+          filter: `user_id=eq.${data.user.id}`,
+        },
+        () => void syncAccountData(true),
+      )
+      .subscribe();
   });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") void syncAccountData(true);
