@@ -83,6 +83,30 @@ export type Database = {
         }
         Relationships: []
       }
+      pos_data: {
+        Row: {
+          products: Json
+          sales: Json
+          shop: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          products?: Json
+          sales?: Json
+          shop?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          products?: Json
+          sales?: Json
+          shop?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
