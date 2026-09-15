@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export type Product = {
   id: string;
@@ -44,6 +45,7 @@ export type Sale = {
 const PRODUCTS_KEY = "pos.products";
 const SHOP_KEY = "pos.shop";
 const SALES_KEY = "pos.sales";
+const OWNER_KEY = "pos.accountOwner";
 
 const safeParse = <T,>(raw: string | null, fallback: T): T => {
   if (!raw) return fallback;
@@ -63,6 +65,151 @@ const write = (key: string, value: unknown) => {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(key, JSON.stringify(value));
   window.dispatchEvent(new CustomEvent("pos:change", { detail: { key } }));
+};
+
+type PosSnapshot = {
+  products: Product[];
+  sales: Sale[];
+  shop: Shop;
+};
+
+let activeUserId: string | null = null;
+let syncPromise: Promise<void> | null = null;
+let lastSyncedAt = 0;
+let syncStarted = false;
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let saveInFlight = false;
+let saveQueued = false;
+
+const localSnapshot = (): PosSnapshot => ({
+  products: read(PRODUCTS_KEY, seedProducts),
+  sales: read(SALES_KEY, []),
+  shop: { ...defaultShop, ...read(SHOP_KEY, defaultShop) },
+});
+
+const setLocalSnapshot = (snapshot: PosSnapshot, userId: string) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(PRODUCTS_KEY, JSON.stringify(snapshot.products));
+  window.localStorage.setItem(SALES_KEY, JSON.stringify(snapshot.sales));
+  window.localStorage.setItem(SHOP_KEY, JSON.stringify(snapshot.shop));
+  window.localStorage.setItem(OWNER_KEY, userId);
+  window.dispatchEvent(new CustomEvent("pos:change", { detail: { key: "*" } }));
+};
+
+const clearLocalSnapshot = () => {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(PRODUCTS_KEY);
+  window.localStorage.removeItem(SALES_KEY);
+  window.localStorage.removeItem(SHOP_KEY);
+  window.localStorage.removeItem(OWNER_KEY);
+  window.dispatchEvent(new CustomEvent("pos:change", { detail: { key: "*" } }));
+};
+
+const saveCloudData = () => {
+  if (!activeUserId || saveTimer || saveInFlight) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    void flushCloudData();
+  }, 450);
+};
+
+const flushCloudData = async () => {
+  if (!activeUserId) return;
+  saveQueued = false;
+  saveInFlight = true;
+  const userId = activeUserId;
+  const snapshot = localSnapshot();
+  try {
+    const { error } = await supabase.from("pos_data").upsert(
+      {
+        user_id: userId,
+        products: snapshot.products,
+        sales: snapshot.sales,
+        shop: snapshot.shop,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
+    if (error) throw error;
+  } catch (error) {
+    console.error("POS data sync failed", error);
+  } finally {
+    saveInFlight = false;
+    if (saveQueued) saveCloudData();
+  }
+};
+
+const syncAccountData = async (force = false) => {
+  if (syncPromise) return syncPromise;
+  syncPromise = (async () => {
+    const { data, error: userError } = await supabase.auth.getUser();
+    if (userError || !data.user) return;
+    const userId = data.user.id;
+    const now = Date.now();
+    if (!force && activeUserId === userId && now - lastSyncedAt < 3000) return;
+    activeUserId = userId;
+
+    const { data: cloudRow, error } = await supabase
+      .from("pos_data")
+      .select("products, sales, shop")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) throw error;
+
+    if (cloudRow) {
+      setLocalSnapshot(
+        {
+          products: (cloudRow.products as unknown as Product[]) ?? seedProducts,
+          sales: (cloudRow.sales as unknown as Sale[]) ?? [],
+          shop: { ...defaultShop, ...((cloudRow.shop as unknown as Partial<Shop>) ?? {}) },
+        },
+        userId,
+      );
+    } else {
+      const previousOwner = typeof window === "undefined" ? null : window.localStorage.getItem(OWNER_KEY);
+      const snapshot = previousOwner && previousOwner !== userId
+        ? { products: seedProducts, sales: [], shop: defaultShop }
+        : localSnapshot();
+      setLocalSnapshot(snapshot, userId);
+      await supabase.from("pos_data").upsert(
+        {
+          user_id: userId,
+          products: snapshot.products,
+          sales: snapshot.sales,
+          shop: snapshot.shop,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" },
+      );
+    }
+    lastSyncedAt = Date.now();
+  })()
+    .catch((error) => {
+      console.error("POS account data could not be loaded", error);
+    })
+    .finally(() => {
+      syncPromise = null;
+    });
+  return syncPromise;
+};
+
+const startAccountSync = () => {
+  if (syncStarted || typeof window === "undefined") return;
+  syncStarted = true;
+  void syncAccountData(true);
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === "SIGNED_IN" || event === "USER_UPDATED") {
+      void syncAccountData(true);
+    }
+    if (event === "SIGNED_OUT") {
+      activeUserId = null;
+      lastSyncedAt = 0;
+      clearLocalSnapshot();
+    }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void syncAccountData(true);
+  });
 };
 
 export const defaultShop: Shop = {
@@ -85,9 +232,10 @@ const seedProducts: Product[] = [
 function useStored<T>(key: string, fallback: T): [T, (v: T) => void] {
   const [state, setState] = useState<T>(() => read(key, fallback));
   useEffect(() => {
+    startAccountSync();
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as { key?: string } | undefined;
-      if (!detail || detail.key === key) {
+      if (!detail || detail.key === key || detail.key === "*") {
         setState(read(key, fallback));
       }
     };
@@ -98,6 +246,8 @@ function useStored<T>(key: string, fallback: T): [T, (v: T) => void] {
   const update = (v: T) => {
     write(key, v);
     setState(v);
+    saveQueued = true;
+    saveCloudData();
   };
   return [state, update];
 }
