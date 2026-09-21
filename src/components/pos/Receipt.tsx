@@ -198,9 +198,9 @@ export function ReceiptBody({ sale, shop }: { sale: Sale; shop: Shop }) {
   );
 }
 
-export function Receipt({ sale, shop }: { sale: Sale; shop: Shop }) {
+export function Receipt({ sale, shop, active = false }: { sale: Sale; shop: Shop; active?: boolean }) {
   return (
-    <div className="receipt-print-root hidden print:block print:text-black print:bg-white">
+    <div className={`receipt-print-root${active ? " receipt-print-active" : ""} hidden print:text-black print:bg-white`}>
       <ReceiptBody sale={sale} shop={shop} />
     </div>
   );

@@ -179,12 +179,16 @@
     visibility: hidden !important;
   }
 
-  .receipt-print-root,
-  .receipt-print-root * {
+  .receipt-print-active,
+  .receipt-print-active * {
     visibility: visible !important;
   }
 
   .receipt-print-root {
+    display: none !important;
+  }
+
+  .receipt-print-active {
     display: block !important;
     position: absolute !important;
     inset: 0 auto auto 0 !important;
