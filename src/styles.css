@@ -158,6 +158,34 @@
   }
 }
 
+/* A real 58mm-width canvas for WhatsApp/download images. It stays off-screen
+   but remains rendered so html-to-image can include the entire long receipt. */
+.receipt-image-export {
+  position: fixed;
+  top: 0;
+  left: -100000px;
+  width: 384px;
+  min-width: 384px;
+  max-width: 384px;
+  box-sizing: border-box;
+  padding: 16px 14px 22px;
+  overflow: visible;
+  background: white;
+  color: black;
+  font-family: ui-monospace, "Courier New", monospace;
+  pointer-events: none;
+}
+
+.receipt-image-export .thermal-receipt {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  color: black;
+  background: white;
+  font-family: ui-monospace, "Courier New", monospace;
+  line-height: 1.35;
+}
+
 /* ---- Thermal receipt printer (58mm / 80mm roll) ---- */
 @media print {
   @page {

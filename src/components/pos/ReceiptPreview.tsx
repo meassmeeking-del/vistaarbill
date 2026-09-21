@@ -24,7 +24,7 @@ type Props = {
 };
 
 export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
-  const previewRef = useRef<HTMLDivElement | null>(null);
+  const exportRef = useRef<HTMLDivElement | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [phone, setPhone] = useState(sale?.customerPhone ?? "");
@@ -39,13 +39,37 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
   };
 
   const buildImageBlob = async (): Promise<Blob> => {
-    const node = previewRef.current;
+    const node = exportRef.current;
     if (!node) throw new Error("Receipt not ready");
+
+    await document.fonts?.ready;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await Promise.all(
+      Array.from(node.querySelectorAll("img")).map(
+        (image) =>
+          image.complete
+            ? Promise.resolve()
+            : new Promise<void>((resolve) => {
+                image.addEventListener("load", () => resolve(), { once: true });
+                image.addEventListener("error", () => resolve(), { once: true });
+              }),
+      ),
+    );
+
     const { toBlob } = await import("html-to-image");
     const blob = await toBlob(node, {
       pixelRatio: 2.5,
-      backgroundColor: "#ffffff",
+      width: 384,
+      backgroundColor: "white",
       cacheBust: true,
+      style: {
+        width: "384px",
+        minWidth: "384px",
+        maxWidth: "384px",
+        boxSizing: "border-box",
+        backgroundColor: "white",
+        color: "black",
+      },
     });
     if (!blob) throw new Error("Image generation failed");
     return blob;
@@ -202,12 +226,15 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
 
         <div className="rounded-xl bg-muted p-3">
           <div
-            ref={previewRef}
             className="bg-white text-black mx-auto shadow-lg relative overflow-hidden"
             style={{ width: 260, fontFamily: "ui-monospace, monospace", padding: 10 }}
           >
             <ReceiptBody sale={sale} shop={shop} />
           </div>
+        </div>
+
+        <div ref={exportRef} className="receipt-image-export" aria-hidden="true">
+          <ReceiptBody sale={sale} shop={shop} />
         </div>
 
 
