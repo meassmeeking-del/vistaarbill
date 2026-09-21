@@ -280,10 +280,8 @@ export function ReceiptPreview({ open, onOpenChange, sale, shop }: Props) {
           </Button>
         </DialogFooter>
 
-        {/* Hidden printable receipt — uses existing print stylesheet */}
-        <div className="hidden">
-          <ReceiptView sale={sale} shop={shop} />
-        </div>
+        {/* Only this selected receipt is exposed to the printer. */}
+        <ReceiptView sale={sale} shop={shop} active />
       </DialogContent>
     </Dialog>
   );
