@@ -10,6 +10,7 @@ import { Loader2, ShieldCheck, Smartphone } from "lucide-react";
 import {
   sendPhoneOtp,
   confirmPhoneOtp,
+  checkPhoneVerified,
   checkAccountExists,
   phoneOtpResetPassword,
 } from "@/lib/otp.functions";
@@ -216,40 +217,48 @@ export function AuthForm() {
     }
     setLoading(true);
     try {
+      const verification = await checkPhoneVerified({
+        data: { phone: parsed.data.phone },
+      });
+      if (!verification.verified) {
+        setOtpVerified(false);
+        toast.error("Phone verification expire ho gayi — naya OTP verify karein");
+        return;
+      }
       const taken = await checkAccountExists({
         data: { email: parsed.data.email, phone: parsed.data.phone },
       });
       if (taken.emailTaken) {
-        setLoading(false);
         toast.error("Ye email pehle se registered hai — sign in karein");
         return;
       }
       if (taken.phoneTaken) {
-        setLoading(false);
         toast.error("Ye mobile number pehle se registered hai");
         return;
       }
-    } catch {
-      /* ignore check failure, signUp will still error out */
-    }
-    const { error } = await supabase.auth.signUp({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-        data: {
-          display_name: parsed.data.displayName,
-          shop_name: parsed.data.shopName,
-          phone: parsed.data.phone,
+      const { data, error } = await supabase.auth.signUp({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: {
+            display_name: parsed.data.displayName,
+            shop_name: parsed.data.shopName,
+            phone: parsed.data.phone,
+          },
         },
-      },
-    });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Account created — check your email to confirm");
-      setTab("signin");
+      });
+      if (error) throw error;
+      if (data.session) {
+        toast.success("Account created — aap sign in ho gaye");
+      } else {
+        toast.success("Account created — email confirm karke sign in karein");
+        setTab("signin");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Account create nahi hua");
+    } finally {
+      setLoading(false);
     }
   };
 
