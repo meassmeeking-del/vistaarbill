@@ -8,6 +8,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import {
   Loader2,
@@ -39,6 +46,7 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
   const [utr, setUtr] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [payStep, setPayStep] = useState<'idle' | 'opened' | 'confirm'>('idle')
+  const [buyOpen, setBuyOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -150,7 +158,39 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
   const monthlyDays = Number(settings?.monthly_days ?? 30)
 
   return (
-    <LockShell>
+    <>
+      <div className="relative min-h-screen">
+        {latest?.status === 'pending' ? (
+          <PendingStatusBar createdAt={latest.created_at} plan={latest.plan} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setBuyOpen(true)}
+            className="w-full bg-primary py-2 text-sm font-bold text-primary-foreground"
+          >
+            Plan locked · Buy Plan
+          </button>
+        )}
+        {children}
+        <button
+          type="button"
+          aria-label="Plan kharidne ke liye kholein"
+          onClick={() => setBuyOpen(true)}
+          className="fixed inset-x-0 bottom-0 top-36 z-30 cursor-pointer bg-background/10 backdrop-blur-[1px]"
+        >
+          <span className="sr-only">Buy Plan</span>
+        </button>
+      </div>
+
+      <Dialog open={buyOpen} onOpenChange={setBuyOpen}>
+        <DialogContent className="max-h-[92vh] max-w-md overflow-y-auto p-0">
+          <DialogHeader className="border-b p-5 pr-12 text-left">
+            <DialogTitle>Buy Plan</DialogTitle>
+            <DialogDescription>
+              VistaarBill use karne ke liye plan choose karke payment karein.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 p-5">
       {/* Pending state */}
       {latest?.status === 'pending' && (
         <PendingCard latest={latest} onRefresh={refresh} />
@@ -280,7 +320,10 @@ export function SubscriptionGate({ children }: { children: ReactNode }) {
           )}
         </>
       )}
-    </LockShell>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
