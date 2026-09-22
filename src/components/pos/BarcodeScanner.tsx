@@ -68,7 +68,7 @@ export function BarcodeScanner({
         if (cancelled) return;
         setDevices(list);
         const back = list.find((d) => /back|rear|environment/i.test(d.label));
-        const chosen = deviceId || back?.deviceId || list[0]?.deviceId;
+        const chosen = deviceId || back?.deviceId;
         if (deviceId !== chosen) setDeviceId(chosen);
 
         const constraints: MediaStreamConstraints = {
@@ -120,7 +120,12 @@ export function BarcodeScanner({
         controlsRef.current = controls;
       } catch (e: unknown) {
         if (cancelled) return;
-        const msg = e instanceof Error ? e.message : "Camera access failed";
+        const raw = e instanceof Error ? e.message : "Camera access failed";
+        const msg = /permission|notallowed/i.test(raw)
+          ? "Camera permission allow karein, phir scanner dobara kholein"
+          : /notfound|device/i.test(raw)
+            ? "Is phone par camera nahi mila"
+            : `Scanner start nahi hua: ${raw}`;
         setError(msg);
         toast.error(msg);
       }
