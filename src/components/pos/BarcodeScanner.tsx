@@ -123,7 +123,7 @@ export function BarcodeScanner({
             : /notreadable|trackstart/i.test(raw)
             ? "Camera kisi aur app me chal raha hai — use band karke dobara try karein"
             : /notsupported/i.test(raw)
-            ? "Is phone par camera nahi mila"
+            ? "Is browser me camera support nahi hai — Chrome me HTTPS link kholein"
             : `Scanner start nahi hua: ${raw}`;
         setError(msg);
         toast.error(msg);
