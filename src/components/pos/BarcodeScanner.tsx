@@ -64,36 +64,31 @@ export function BarcodeScanner({
 
     (async () => {
       try {
-        const list = await BrowserMultiFormatReader.listVideoInputDevices();
-        if (cancelled) return;
-        setDevices(list);
-        const back = list.find((d) => /back|rear|environment/i.test(d.label));
-        const chosen = deviceId || back?.deviceId;
-        if (deviceId !== chosen) setDeviceId(chosen);
-
-        const constraints: MediaStreamConstraints = {
-          audio: false,
-          video: chosen
-            ? {
-                deviceId: { exact: chosen },
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                frameRate: { ideal: 30 },
-              }
-            : {
-                facingMode: { ideal: "environment" },
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                frameRate: { ideal: 30 },
-              },
-        };
-
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("NotSupported: camera ke liye HTTPS aur naya browser chahiye");
+        }
+        const base = { width: { ideal: 1280 }, height: { ideal: 720 } };
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: deviceId
+              ? { ...base, deviceId: { exact: deviceId } }
+              : { ...base, facingMode: { ideal: "environment" } },
+          });
+        } catch (err) {
+          if (err instanceof Error && /NotAllowed|Permission/i.test(err.name + err.message)) throw err;
+          stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+        }
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
         streamRef.current = stream;
+        // Labels available only after permission — list devices now (without re-triggering effect)
+        BrowserMultiFormatReader.listVideoInputDevices()
+          .then((list) => !cancelled && setDevices(list))
+          .catch(() => {});
 
         const track = stream.getVideoTracks()[0];
         const caps =
