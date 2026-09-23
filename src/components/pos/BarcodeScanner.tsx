@@ -115,10 +115,14 @@ export function BarcodeScanner({
         controlsRef.current = controls;
       } catch (e: unknown) {
         if (cancelled) return;
-        const raw = e instanceof Error ? e.message : "Camera access failed";
+        const raw = e instanceof Error ? `${e.name} ${e.message}` : "Camera access failed";
         const msg = /permission|notallowed/i.test(raw)
           ? "Camera permission allow karein, phir scanner dobara kholein"
-          : /notfound|device/i.test(raw)
+          : /notfound|overconstrained/i.test(raw)
+            ? "Is phone par camera nahi mila"
+            : /notreadable|trackstart/i.test(raw)
+            ? "Camera kisi aur app me chal raha hai — use band karke dobara try karein"
+            : /notsupported/i.test(raw)
             ? "Is phone par camera nahi mila"
             : `Scanner start nahi hua: ${raw}`;
         setError(msg);
