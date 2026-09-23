@@ -123,7 +123,7 @@ export function ShopSettings() {
           <KeyRound className="h-4 w-4 text-primary" /> Account password
         </h3>
         <p className="text-xs text-muted-foreground">
-          OTP se login kiya hai aur password set nahi hai? Yahan naya password
+          Account ka password badalna hai? Yahan naya password
           bana lein.
         </p>
         <div className="space-y-1">
