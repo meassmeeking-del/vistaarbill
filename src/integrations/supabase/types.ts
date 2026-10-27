@@ -370,6 +370,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      preview_plan_coupon: {
+        Args: { p_coupon_code: string; p_plan_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "cashier"
