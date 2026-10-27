@@ -1,16 +1,17 @@
-import { describe, expect, test } from 'bun:test'
+import assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 import { calculateDiscount, FREE_PLAN_DAYS } from './subscription-pricing'
 
 describe('subscription pricing rules', () => {
-  test('the free plan lasts seven days', () => {
-    expect(FREE_PLAN_DAYS).toBe(7)
+  it('the free plan lasts seven days', () => {
+    assert.equal(FREE_PLAN_DAYS, 7)
   })
 
-  test('a percentage coupon applies the requested percentage', () => {
-    expect(calculateDiscount(99, 'percent', 10)).toBe(9.9)
+  it('a percentage coupon applies the requested percentage', () => {
+    assert.equal(calculateDiscount(99, 'percent', 10), 9.9)
   })
 
-  test('a fixed coupon never discounts more than the plan price', () => {
-    expect(calculateDiscount(99, 'fixed', 120)).toBe(99)
+  it('a fixed coupon never discounts more than the plan price', () => {
+    assert.equal(calculateDiscount(99, 'fixed', 120), 99)
   })
 })
