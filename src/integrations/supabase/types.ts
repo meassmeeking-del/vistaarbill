@@ -53,6 +53,87 @@ export type Database = {
         }
         Relationships: []
       }
+      coupon_redemptions: {
+        Row: {
+          coupon_id: string
+          discount_amount: number
+          final_amount: number
+          id: string
+          redeemed_at: string
+          subscription_request_id: string | null
+          user_id: string
+        }
+        Insert: {
+          coupon_id: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          redeemed_at?: string
+          subscription_request_id?: string | null
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string
+          discount_amount?: number
+          final_amount?: number
+          id?: string
+          redeemed_at?: string
+          subscription_request_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_redemptions_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_redemptions_subscription_request_id_fkey"
+            columns: ["subscription_request_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          max_uses: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          discount_type: string
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          max_uses?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          max_uses?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       phone_otps: {
         Row: {
           attempts: number
@@ -180,8 +261,10 @@ export type Database = {
         Row: {
           amount: number
           approved_at: string | null
+          coupon_code: string | null
           created_at: string
           days: number | null
+          discount_amount: number
           expires_at: string | null
           id: string
           note: string | null
@@ -197,8 +280,10 @@ export type Database = {
         Insert: {
           amount: number
           approved_at?: string | null
+          coupon_code?: string | null
           created_at?: string
           days?: number | null
+          discount_amount?: number
           expires_at?: string | null
           id?: string
           note?: string | null
@@ -214,8 +299,10 @@ export type Database = {
         Update: {
           amount?: number
           approved_at?: string | null
+          coupon_code?: string | null
           created_at?: string
           days?: number | null
+          discount_amount?: number
           expires_at?: string | null
           id?: string
           note?: string | null
@@ -264,6 +351,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_free_plan: { Args: never; Returns: Json }
+      create_subscription_request_with_coupon: {
+        Args: {
+          p_coupon_code: string
+          p_legacy_plan: Database["public"]["Enums"]["subscription_plan"]
+          p_note: string
+          p_plan_id: string
+          p_utr: string
+        }
+        Returns: Json
+      }
       has_active_subscription: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
