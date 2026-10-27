@@ -20,6 +20,9 @@ import {
 export function ShopSettings() {
   const { shop, setShop } = useShop();
   const [form, setForm] = useState(shop);
+  const [profile, setProfile] = useState({ displayName: "", shopName: "", email: "" });
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileSaving, setProfileSaving] = useState(false);
   const [volume, setVol] = useState(() => Math.round(getVolume() * 100));
   const [hapticLvl, setHap] = useState(() => Math.round(getHapticIntensity() * 100));
   const [newPw, setNewPw] = useState("");
@@ -44,6 +47,58 @@ export function ShopSettings() {
     setForm(shop);
   }, [shop]);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        if (!authData.user) return;
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("display_name, shop_name")
+          .eq("id", authData.user.id)
+          .maybeSingle();
+        if (error) throw error;
+        if (!cancelled) {
+          setProfile({
+            displayName: data?.display_name ?? "",
+            shopName: data?.shop_name ?? "",
+            email: authData.user.email ?? "",
+          });
+        }
+      } catch (error) {
+        if (!cancelled) toast.error(error instanceof Error ? error.message : "Profile load nahi hua");
+      } finally {
+        if (!cancelled) setProfileLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const saveProfile = async () => {
+    setProfileSaving(true);
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) throw new Error("Pehle sign in karein");
+      const { error } = await supabase.from("profiles").upsert(
+        {
+          id: authData.user.id,
+          display_name: profile.displayName.trim() || null,
+          shop_name: profile.shopName.trim() || null,
+        },
+        { onConflict: "id" },
+      );
+      if (error) throw error;
+      toast.success("Profile save ho gaya");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Profile save nahi hua");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
   const fields: { key: "name" | "addressLine1" | "addressLine2" | "phoneNumber" | "upiId" | "footerText"; label: string }[] = [
     { key: "name", label: "Shop Name" },
     { key: "addressLine1", label: "Address Line 1" },
@@ -56,6 +111,45 @@ export function ShopSettings() {
   return (
     <div className="max-w-xl space-y-4">
       <h2 className="text-2xl font-semibold">Shop Settings</h2>
+      <section className="overflow-hidden rounded-lg border bg-card text-card-foreground">
+        <div className="border-b bg-muted/40 px-4 py-4 sm:px-5">
+          <div className="flex items-center gap-3">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-semibold text-primary-foreground">
+              {(profile.displayName || profile.email || "V").slice(0, 1).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-semibold">Account profile</h3>
+              <p className="truncate text-sm text-muted-foreground">{profile.email || "Your VistaarBill account"}</p>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-3 p-4 sm:p-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="profile-display-name">Your name</Label>
+            <Input
+              id="profile-display-name"
+              value={profile.displayName}
+              disabled={profileLoading}
+              onChange={(event) => setProfile({ ...profile, displayName: event.target.value })}
+              placeholder="Name shown on your account"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="profile-shop-name">Business name</Label>
+            <Input
+              id="profile-shop-name"
+              value={profile.shopName}
+              disabled={profileLoading}
+              onChange={(event) => setProfile({ ...profile, shopName: event.target.value })}
+              placeholder="Your shop or business"
+            />
+          </div>
+          <Button onClick={saveProfile} disabled={profileLoading || profileSaving}>
+            {profileSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save profile
+          </Button>
+        </div>
+      </section>
       <div className="rounded-lg border bg-card text-card-foreground p-4 space-y-3">
         {fields.map((f) => (
           <div key={f.key}>
