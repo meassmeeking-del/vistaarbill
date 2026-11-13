@@ -1,4 +1,5 @@
 ## Current work
+- [ ] Add a separate manual quick-bill flow with customer details, custom line items, receipt creation, and WhatsApp sharing
 - [x] Show the customer interface before plan purchase and open a Buy Plan popup on locked taps
 - [x] Repair new account signup
 - [x] Improve phone barcode scanner camera selection and errors
